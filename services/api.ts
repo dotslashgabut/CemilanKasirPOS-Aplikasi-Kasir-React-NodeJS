@@ -550,6 +550,33 @@ export const ApiService = {
         if (!res.ok) throw new Error('Failed to update purchase');
     },
     deletePurchase: async (id: string) => {
+        // 0. Cascade Delete: Find and delete all returns linked to this purchase
+        try {
+            const allPurchasesRes = await fetch(`${API_URL}/purchases`, { headers: getHeaders() });
+            if (allPurchasesRes.ok) {
+                const allPurchases = await allPurchasesRes.json();
+                // Find returns that are linked to this purchase via originalPurchaseId OR description (legacy)
+                const children = allPurchases.filter((p: any) =>
+                    p.originalPurchaseId === id ||
+                    (p.type === 'RETURN' && p.description && p.description.includes(id.substring(0, 6)))
+                );
+
+                if (children.length > 0) {
+                    console.log(`Found ${children.length} return(s) linked to purchase ${id}. Deleting them first...`);
+                    for (const child of children) {
+                        // Avoid infinite recursion if something is wrong
+                        if (child.id === id) continue;
+
+                        console.log(`Cascade deleting return purchase ${child.id}`);
+                        await ApiService.deletePurchase(child.id);
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn("Error during cascade delete check:", e);
+            // Continue with main deletion even if cascade check fails (though ideally it shouldn't)
+        }
+
         // 1. Get Purchase to revert stock
         const res = await fetch(`${API_URL}/purchases`, { headers: getHeaders() });
         if (!res.ok) throw new Error('Failed to fetch purchases for deletion');
@@ -586,18 +613,8 @@ export const ApiService = {
             }
 
             // 2. Delete Related CashFlows
-            // Find cashflows that mention this purchase ID
-            const cfRes = await fetch(`${API_URL}/cashflow`, { headers: getHeaders() });
-            if (cfRes.ok) {
-                const cashflows = await cfRes.json();
-                const relatedCfs = cashflows.filter((cf: any) => cf.description.includes(id.substring(0, 6)));
-                for (const cf of relatedCfs) {
-                    await fetch(`${API_URL}/cashflow/${cf.id}`, {
-                        method: 'DELETE',
-                        headers: getHeaders()
-                    });
-                }
-            }
+            // Handled by Backend (Cascading Delete via referenceId)
+            // Legacy cleanup is skipped as description matching is unreliable for purchases
         }
 
         // 3. Delete Purchase
@@ -659,112 +676,68 @@ export const ApiService = {
 
     // Reset Functions
     resetProducts: async () => {
-        // Delete all products
-        const products = await fetch(`${API_URL}/products`, { headers: getHeaders() });
-        if (products.ok) {
-            const data = await products.json();
-            for (const product of data) {
-                await fetch(`${API_URL}/products/${product.id}`, {
-                    method: 'DELETE',
-                    headers: getHeaders()
-                });
-            }
+        const products = await ApiService.getProducts();
+        for (const product of products) {
+            await ApiService.deleteProduct(product.id);
         }
     },
     resetTransactions: async () => {
-        // Delete all transactions
-        const transactions = await fetch(`${API_URL}/transactions`, { headers: getHeaders() });
-        if (transactions.ok) {
-            const data = await transactions.json();
-            for (const tx of data) {
-                await fetch(`${API_URL}/transactions/${tx.id}`, {
-                    method: 'DELETE',
-                    headers: getHeaders()
-                });
+        const transactions = await ApiService.getTransactions();
+        for (const tx of transactions) {
+            try {
+                await ApiService.deleteTransaction(tx.id);
+            } catch (e) {
+                console.error(`Failed to delete transaction ${tx.id} during reset`, e);
             }
         }
     },
     resetPurchases: async () => {
-        // Delete all purchases
-        const purchases = await fetch(`${API_URL}/purchases`, { headers: getHeaders() });
-        if (purchases.ok) {
-            const data = await purchases.json();
-            for (const purchase of data) {
-                await fetch(`${API_URL}/purchases/${purchase.id}`, {
-                    method: 'DELETE',
-                    headers: getHeaders()
-                });
+        const purchases = await ApiService.getPurchases();
+        for (const purchase of purchases) {
+            try {
+                await ApiService.deletePurchase(purchase.id);
+            } catch (e) {
+                console.error(`Failed to delete purchase ${purchase.id} during reset`, e);
             }
         }
     },
     resetCashFlow: async () => {
-        // Delete all cashflow
-        const cashflows = await fetch(`${API_URL}/cashflow`, { headers: getHeaders() });
-        if (cashflows.ok) {
-            const data = await cashflows.json();
-            for (const cf of data) {
-                await fetch(`${API_URL}/cashflow/${cf.id}`, {
-                    method: 'DELETE',
-                    headers: getHeaders()
-                });
-            }
+        const cashflows = await ApiService.getCashFlow();
+        for (const cf of cashflows) {
+            await fetch(`${API_URL}/cashflow/${cf.id}`, {
+                method: 'DELETE',
+                headers: getHeaders()
+            });
         }
     },
     resetAllFinancialData: async () => {
         // Reset all financial data
+        // Note: Order matters? 
+        // deleteTransaction handles its own cashflow and stock
+        // deletePurchase handles its own cashflow and stock
+        // So we should run them, then clean up any remaining cashflow
         await ApiService.resetTransactions();
         await ApiService.resetPurchases();
         await ApiService.resetCashFlow();
     },
     resetMasterData: async () => {
-        // Delete all master data (products, categories, customers, suppliers)
+        // Delete all master data
+
         // Products
-        const products = await fetch(`${API_URL}/products`, { headers: getHeaders() });
-        if (products.ok) {
-            const data = await products.json();
-            for (const product of data) {
-                await fetch(`${API_URL}/products/${product.id}`, {
-                    method: 'DELETE',
-                    headers: getHeaders()
-                });
-            }
-        }
+        const products = await ApiService.getProducts();
+        for (const p of products) await ApiService.deleteProduct(p.id);
 
         // Categories
-        const categories = await fetch(`${API_URL}/categories`, { headers: getHeaders() });
-        if (categories.ok) {
-            const data = await categories.json();
-            for (const category of data) {
-                await fetch(`${API_URL}/categories/${category.id}`, {
-                    method: 'DELETE',
-                    headers: getHeaders()
-                });
-            }
-        }
+        const categories = await ApiService.getCategories();
+        for (const c of categories) await ApiService.deleteCategory(c.id);
 
         // Customers
-        const customers = await fetch(`${API_URL}/customers`, { headers: getHeaders() });
-        if (customers.ok) {
-            const data = await customers.json();
-            for (const customer of data) {
-                await fetch(`${API_URL}/customers/${customer.id}`, {
-                    method: 'DELETE',
-                    headers: getHeaders()
-                });
-            }
-        }
+        const customers = await ApiService.getCustomers();
+        for (const c of customers) await ApiService.deleteCustomer(c.id);
 
         // Suppliers
-        const suppliers = await fetch(`${API_URL}/suppliers`, { headers: getHeaders() });
-        if (suppliers.ok) {
-            const data = await suppliers.json();
-            for (const supplier of data) {
-                await fetch(`${API_URL}/suppliers/${supplier.id}`, {
-                    method: 'DELETE',
-                    headers: getHeaders()
-                });
-            }
-        }
+        const suppliers = await ApiService.getSuppliers();
+        for (const s of suppliers) await ApiService.deleteSupplier(s.id);
     },
     resetAllData: async () => {
         // Nuclear option: Reset EVERYTHING (Financial + Master Data)

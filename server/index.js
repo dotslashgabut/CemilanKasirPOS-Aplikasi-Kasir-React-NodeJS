@@ -275,7 +275,8 @@ app.post('/api/transactions', authenticateToken, async (req, res) => {
                     description: description,
                     paymentMethod: txData.paymentMethod,
                     bankId: txData.bankId,
-                    bankName: txData.bankName
+                    bankName: txData.bankName,
+                    referenceId: txData.id
                 }, { transaction: t });
             }
         }
@@ -338,7 +339,8 @@ app.post('/api/purchases', authenticateToken, async (req, res) => {
                     description: description,
                     paymentMethod: purchaseData.paymentMethod,
                     bankId: purchaseData.bankId,
-                    bankName: purchaseData.bankName
+                    bankName: purchaseData.bankName,
+                    referenceId: purchase.id
                 }, { transaction: t });
             }
         }
@@ -348,6 +350,104 @@ app.post('/api/purchases', authenticateToken, async (req, res) => {
     } catch (error) {
         await t.rollback();
         console.error('Purchase Error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Custom Delete Transaction (Cascade to CashFlow and Returns)
+app.delete('/api/transactions/:id', authenticateToken, async (req, res) => {
+    const t = await sequelize.transaction();
+    try {
+        const { id } = req.params;
+        const Transaction = models.Transaction;
+        const CashFlow = models.CashFlow;
+
+        // 1. Find the transaction
+        const transaction = await Transaction.findByPk(id, { transaction: t });
+        if (!transaction) {
+            await t.rollback();
+            return res.status(404).json({ error: 'Transaction not found' });
+        }
+
+        // 2. Find and delete associated CashFlow (e.g. initial payment, debt repayment)
+        await CashFlow.destroy({
+            where: { referenceId: id },
+            transaction: t
+        });
+
+        // 3. Find child transactions (Returns)
+        const returns = await Transaction.findAll({
+            where: { originalTransactionId: id },
+            transaction: t
+        });
+
+        for (const ret of returns) {
+            // Delete CashFlow for return (e.g. refund)
+            await CashFlow.destroy({
+                where: { referenceId: ret.id },
+                transaction: t
+            });
+            // Delete the return transaction
+            await ret.destroy({ transaction: t });
+        }
+
+        // 4. Delete the transaction itself
+        await transaction.destroy({ transaction: t });
+
+        await t.commit();
+        res.status(204).send();
+    } catch (error) {
+        await t.rollback();
+        console.error('Delete Transaction Error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Custom Delete Purchase (Cascade to CashFlow and Returns)
+app.delete('/api/purchases/:id', authenticateToken, async (req, res) => {
+    const t = await sequelize.transaction();
+    try {
+        const { id } = req.params;
+        const Purchase = models.Purchase;
+        const CashFlow = models.CashFlow;
+
+        // 1. Find the purchase
+        const purchase = await Purchase.findByPk(id, { transaction: t });
+        if (!purchase) {
+            await t.rollback();
+            return res.status(404).json({ error: 'Purchase not found' });
+        }
+
+        // 2. Find and delete associated CashFlow
+        await CashFlow.destroy({
+            where: { referenceId: id },
+            transaction: t
+        });
+
+        // 3. Find child purchases (Returns)
+        const returns = await Purchase.findAll({
+            where: { originalPurchaseId: id },
+            transaction: t
+        });
+
+        for (const ret of returns) {
+            // Delete CashFlow for return
+            await CashFlow.destroy({
+                where: { referenceId: ret.id },
+                transaction: t
+            });
+            // Delete the return purchase
+            await ret.destroy({ transaction: t });
+        }
+
+        // 4. Delete the purchase itself
+        await purchase.destroy({ transaction: t });
+
+        await t.commit();
+        res.status(204).send();
+    } catch (error) {
+        await t.rollback();
+        console.error('Delete Purchase Error:', error);
         res.status(500).json({ error: error.message });
     }
 });

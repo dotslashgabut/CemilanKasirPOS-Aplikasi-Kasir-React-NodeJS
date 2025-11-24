@@ -109,7 +109,7 @@ export const Finance: React.FC<FinanceProps> = ({ currentUser, defaultTab = 'his
     const [returnTxItems, setReturnTxItems] = useState<{ id: string, qty: number, maxQty: number, price: number, name: string }[]>([]);
 
     const [isReturnPurchaseModalOpen, setIsReturnPurchaseModalOpen] = useState(false);
-    const [returnPurchaseItems, setReturnPurchaseItems] = useState<{ id: string, qty: number, price: number, name: string }[]>([]);
+    const [returnPurchaseItems, setReturnPurchaseItems] = useState<{ id: string, qty: number, maxQty: number, price: number, name: string }[]>([]);
     const products = useData(() => StorageService.getProducts(), [], 'products') || [];
     const [productSearch, setProductSearch] = useState('');
     const [returnPurchaseMethod, setReturnPurchaseMethod] = useState<PaymentMethod>(PaymentMethod.CASH);
@@ -165,6 +165,50 @@ export const Finance: React.FC<FinanceProps> = ({ currentUser, defaultTab = 'his
 
         setReturnTxItems(itemsWithRemainingQty);
         setIsReturnTxModalOpen(true);
+    };
+
+    const openReturnPurchaseModal = (purchase: Purchase) => {
+        if (purchase.type === PurchaseType.RETURN) {
+            alert("Pembelian Retur tidak dapat diretur kembali.");
+            return;
+        }
+
+        // Calculate previously returned quantities
+        const previousReturns = purchases.filter(p =>
+            p.type === PurchaseType.RETURN &&
+            p.originalPurchaseId === purchase.id
+        );
+
+        const returnedQuantities: Record<string, number> = {};
+        previousReturns.forEach(ret => {
+            ret.items.forEach(item => {
+                returnedQuantities[item.id] = (returnedQuantities[item.id] || 0) + item.qty;
+            });
+        });
+
+        const itemsWithRemainingQty = purchase.items.map(i => {
+            const returnedQty = returnedQuantities[i.id] || 0;
+            const remainingQty = Math.max(0, i.qty - returnedQty);
+
+            return {
+                id: i.id,
+                qty: 0,
+                maxQty: remainingQty,
+                price: i.finalPrice,
+                name: i.name
+            };
+        });
+
+        const canReturn = itemsWithRemainingQty.some(i => i.maxQty > 0);
+
+        if (!canReturn) {
+            alert("Pembelian ini sudah diretur sepenuhnya.");
+            return;
+        }
+
+        setReturnPurchaseItems(itemsWithRemainingQty);
+        setReturnPurchaseMode('items');
+        setIsReturnPurchaseModalOpen(true);
     };
 
     const submitReturnTx = async () => {
@@ -255,7 +299,8 @@ export const Finance: React.FC<FinanceProps> = ({ currentUser, defaultTab = 'his
                 description: `Refund Retur Transaksi #${detailTransaction.id.substring(0, 6)}`,
                 paymentMethod: PaymentMethod.CASH,
                 userId: currentUser?.id,
-                userName: currentUser?.name
+                userName: currentUser?.name,
+                referenceId: returnTx.id // Link to Return Transaction ID
             });
         }
 
@@ -306,6 +351,7 @@ export const Finance: React.FC<FinanceProps> = ({ currentUser, defaultTab = 'his
             date: new Date().toISOString(),
             supplierId: detailPurchase.supplierId,
             supplierName: detailPurchase.supplierName,
+            originalPurchaseId: detailPurchase.id,
             description: description,
             items: returnPurchaseMode === 'items' ? itemsToReturn.map(i => {
                 const product = products.find(p => p.id === i.id);
@@ -2016,30 +2062,38 @@ export const Finance: React.FC<FinanceProps> = ({ currentUser, defaultTab = 'his
                             </div>
 
                             {/* Return History (If this is a Purchase) */}
-                            {purchases.filter(p => p.type === 'RETURN' && p.description.includes(detailPurchase.id)).length > 0 && (
-                                <div className="mt-6">
-                                    <h4 className="font-bold text-sm text-slate-800 mb-2">Riwayat Retur ke Supplier</h4>
-                                    <div className="bg-orange-50 rounded-lg p-3 space-y-2 text-sm border border-orange-100">
-                                        {purchases
-                                            .filter(p => p.type === 'RETURN' && p.description.includes(detailPurchase.id))
-                                            .map((ret, i) => (
-                                                <div key={i} className="flex justify-between border-b border-orange-200 last:border-0 pb-2">
-                                                    <div>
-                                                        <div className="flex gap-1 text-xs text-slate-500">
-                                                            <span>{new Date(ret.date).toLocaleDateString('id-ID')}</span>
-                                                            <span className="font-mono bg-slate-200 px-1 rounded text-[10px]">{new Date(ret.date).toLocaleTimeString('id-ID')}</span>
+                            {purchases.filter(p => p.type === 'RETURN' && (
+                                p.originalPurchaseId === detailPurchase.id ||
+                                p.description.includes(detailPurchase.id) ||
+                                p.description.includes(detailPurchase.id.substring(0, 6))
+                            )).length > 0 && (
+                                    <div className="mt-6">
+                                        <h4 className="font-bold text-sm text-slate-800 mb-2">Riwayat Retur ke Supplier</h4>
+                                        <div className="bg-orange-50 rounded-lg p-3 space-y-2 text-sm border border-orange-100">
+                                            {purchases
+                                                .filter(p => p.type === 'RETURN' && (
+                                                    p.originalPurchaseId === detailPurchase.id ||
+                                                    p.description.includes(detailPurchase.id) ||
+                                                    p.description.includes(detailPurchase.id.substring(0, 6))
+                                                ))
+                                                .map((ret, i) => (
+                                                    <div key={i} className="flex justify-between border-b border-orange-200 last:border-0 pb-2">
+                                                        <div>
+                                                            <div className="flex gap-1 text-xs text-slate-500">
+                                                                <span>{new Date(ret.date).toLocaleDateString('id-ID')}</span>
+                                                                <span className="font-mono bg-slate-200 px-1 rounded text-[10px]">{new Date(ret.date).toLocaleTimeString('id-ID')}</span>
+                                                            </div>
+                                                            <span className="text-slate-700 block font-medium">Retur #{ret.id.substring(0, 6)}</span>
+                                                            <div className="text-xs text-slate-500 mt-1 italic">
+                                                                {ret.description}
+                                                            </div>
                                                         </div>
-                                                        <span className="text-slate-700 block font-medium">Retur #{ret.id.substring(0, 6)}</span>
-                                                        <div className="text-xs text-slate-500 mt-1 italic">
-                                                            {ret.description}
-                                                        </div>
+                                                        <span className="font-medium text-red-600">{formatIDR(ret.totalAmount)}</span>
                                                     </div>
-                                                    <span className="font-medium text-red-600">{formatIDR(ret.totalAmount)}</span>
-                                                </div>
-                                            ))}
+                                                ))}
+                                        </div>
                                     </div>
-                                </div>
-                            )}
+                                )}
 
                             {/* Original Purchase Info (If this is a Return) */}
                             {detailPurchase.type === 'RETURN' && (
@@ -2133,7 +2187,7 @@ export const Finance: React.FC<FinanceProps> = ({ currentUser, defaultTab = 'his
                             <div className="flex justify-end gap-2 ml-auto">
                                 {detailPurchase.type !== PurchaseType.RETURN && (
                                     <button
-                                        onClick={() => setIsReturnPurchaseModalOpen(true)}
+                                        onClick={() => openReturnPurchaseModal(detailPurchase)}
                                         className="bg-orange-50 border border-orange-300 text-orange-700 px-4 py-2 rounded-lg text-sm font-bold hover:bg-orange-100 flex items-center gap-2"
                                     >
                                         <RotateCcw size={16} /> Retur
@@ -2456,76 +2510,38 @@ export const Finance: React.FC<FinanceProps> = ({ currentUser, defaultTab = 'his
                             </div>
 
                             {returnPurchaseMode === 'items' ? (
-                                <>
-                                    {/* Product Search */}
-                                    <div className="mb-4 relative">
-                                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                        <input
-                                            type="text"
-                                            placeholder="Cari barang untuk diretur..."
-                                            className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500"
-                                            value={productSearch}
-                                            onChange={e => setProductSearch(e.target.value)}
-                                        />
-                                        {productSearch && (
-                                            <div className="absolute z-10 w-full bg-white border border-slate-200 rounded-lg shadow-lg mt-1 max-h-40 overflow-y-auto">
-                                                {products.filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase())).map(p => (
-                                                    <div
-                                                        key={p.id}
-                                                        className="p-2 hover:bg-slate-50 cursor-pointer text-sm flex justify-between"
-                                                        onClick={() => {
-                                                            if (!returnPurchaseItems.find(i => i.id === p.id)) {
-                                                                setReturnPurchaseItems([...returnPurchaseItems, { id: p.id, qty: 1, price: p.hpp, name: p.name }]);
-                                                            }
-                                                            setProductSearch('');
-                                                        }}
-                                                    >
-                                                        <span>{p.name}</span>
-                                                        <span className="text-slate-400 text-xs">Stok: {p.stock}</span>
-                                                    </div>
-                                                ))}
+                                <div className="space-y-3">
+                                    {returnPurchaseItems.map((item, idx) => (
+                                        <div key={item.id} className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
+                                            <div className="flex-1">
+                                                <div className="font-medium text-slate-800">{item.name}</div>
+                                                <div className="text-xs text-slate-500">Maks: {item.maxQty} | Refund/Item: {formatIDR(item.price)}</div>
                                             </div>
-                                        )}
-                                    </div>
-
-                                    <div className="space-y-3">
-                                        {returnPurchaseItems.map((item, idx) => (
-                                            <div key={item.id} className="flex items-center justify-between p-3 border border-slate-200 rounded-lg">
-                                                <div className="flex-1">
-                                                    <div className="font-medium text-slate-800">{item.name}</div>
-                                                    <div className="text-xs text-slate-500">Refund/Item: {formatIDR(item.price)}</div>
-                                                </div>
-                                                <div className="flex items-center gap-3">
-                                                    <button
-                                                        onClick={() => {
-                                                            const newItems = [...returnPurchaseItems];
-                                                            if (newItems[idx].qty > 0) newItems[idx].qty--;
-                                                            if (newItems[idx].qty === 0) {
-                                                                setReturnPurchaseItems(newItems.filter((_, i) => i !== idx));
-                                                            } else {
-                                                                setReturnPurchaseItems(newItems);
-                                                            }
-                                                        }}
-                                                        className="w-8 h-8 flex items-center justify-center bg-slate-100 rounded-full hover:bg-slate-200"
-                                                    >-</button>
-                                                    <span className="w-8 text-center font-bold">{item.qty}</span>
-                                                    <button
-                                                        onClick={() => {
-                                                            const newItems = [...returnPurchaseItems];
-                                                            newItems[idx].qty++;
-                                                            setReturnPurchaseItems(newItems);
-                                                        }}
-                                                        className="w-8 h-8 flex items-center justify-center bg-slate-100 rounded-full hover:bg-slate-200"
-                                                    >+</button>
-                                                    <button onClick={() => setReturnPurchaseItems(returnPurchaseItems.filter((_, i) => i !== idx))} className="text-red-500 ml-2"><X size={16} /></button>
-                                                </div>
+                                            <div className="flex items-center gap-3">
+                                                <button
+                                                    onClick={() => {
+                                                        const newItems = [...returnPurchaseItems];
+                                                        if (newItems[idx].qty > 0) newItems[idx].qty--;
+                                                        setReturnPurchaseItems(newItems);
+                                                    }}
+                                                    className="w-8 h-8 flex items-center justify-center bg-slate-100 rounded-full hover:bg-slate-200"
+                                                >-</button>
+                                                <span className="w-8 text-center font-bold">{item.qty}</span>
+                                                <button
+                                                    onClick={() => {
+                                                        const newItems = [...returnPurchaseItems];
+                                                        if (newItems[idx].qty < item.maxQty) newItems[idx].qty++;
+                                                        setReturnPurchaseItems(newItems);
+                                                    }}
+                                                    className="w-8 h-8 flex items-center justify-center bg-slate-100 rounded-full hover:bg-slate-200"
+                                                >+</button>
                                             </div>
-                                        ))}
-                                        {returnPurchaseItems.length === 0 && (
-                                            <div className="text-center text-slate-400 py-4 text-sm">Belum ada barang dipilih.</div>
-                                        )}
-                                    </div>
-                                </>
+                                        </div>
+                                    ))}
+                                    {returnPurchaseItems.length === 0 && (
+                                        <div className="text-center text-slate-400 py-4 text-sm">Tidak ada barang yang dapat diretur.</div>
+                                    )}
+                                </div>
                             ) : (
                                 <div className="space-y-4">
                                     <div>

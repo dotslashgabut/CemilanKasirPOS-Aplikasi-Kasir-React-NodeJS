@@ -62,6 +62,7 @@ const Transaction = sequelize.define('Transaction', {
 const Purchase = sequelize.define('Purchase', {
     id: { type: DataTypes.STRING, primaryKey: true },
     type: { type: DataTypes.STRING, defaultValue: 'PURCHASE' },
+    originalPurchaseId: { type: DataTypes.STRING },
     date: { type: DataTypes.DATE },
     supplierId: { type: DataTypes.STRING },
     supplierName: { type: DataTypes.STRING },
@@ -85,7 +86,8 @@ const CashFlow = sequelize.define('CashFlow', {
     description: { type: DataTypes.STRING },
     paymentMethod: { type: DataTypes.STRING },
     bankId: { type: DataTypes.STRING },
-    bankName: { type: DataTypes.STRING }
+    bankName: { type: DataTypes.STRING },
+    referenceId: { type: DataTypes.STRING } // To link with Transaction or Purchase ID
 });
 
 const User = sequelize.define('User', {
