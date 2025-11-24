@@ -20,15 +20,20 @@ app.use(express.json({ limit: '50mb' }));
 
 // Rate Limiting
 const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 5 minutes
-    max: 500, // Limit each IP to 1000 requests per windowMs
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 500, // Limit each IP to 500 requests per windowMs
     standardHeaders: true,
     legacyHeaders: false,
+    handler: (req, res) => {
+        res.status(429).json({
+            error: 'Too many requests from this IP, please try again after 15 minutes'
+        });
+    }
 });
 app.use(limiter);
 
 const loginLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 5 minutes
+    windowMs: 15 * 60 * 1000, // 15 minutes
     max: 5, // Limit each IP to 5 login requests per windowMs
     standardHeaders: true,
     legacyHeaders: false,
@@ -51,10 +56,10 @@ const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
     const token = authHeader && authHeader.split(' ')[1];
 
-    if (!token) return res.sendStatus(401);
+    if (!token) return res.status(401).json({ error: 'Unauthorized: No token provided' });
 
     jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-        if (err) return res.sendStatus(403);
+        if (err) return res.status(403).json({ error: 'Forbidden: Invalid token' });
         req.user = user;
         next();
     });
@@ -203,6 +208,149 @@ const createCrudRoutes = (modelName) => {
 
     return router;
 };
+
+// --- Custom Business Logic Routes ---
+
+// Transaction (Sale/Return) Logic
+app.post('/api/transactions', authenticateToken, async (req, res) => {
+    const t = await sequelize.transaction();
+    try {
+        const txData = req.body;
+        // Ensure ID
+        if (!txData.id) txData.id = models.sequelize.fn('uuid'); // or generate on client
+
+        const Transaction = models.Transaction;
+        const Product = models.Product;
+        const CashFlow = models.CashFlow;
+
+        // 1. Create Transaction
+        const transaction = await Transaction.create(txData, { transaction: t });
+
+        // 2. Update Stock
+        if (txData.items && Array.isArray(txData.items)) {
+            for (const item of txData.items) {
+                const product = await Product.findByPk(item.id, { transaction: t });
+                if (product) {
+                    let newStock = product.stock;
+                    if (txData.type === 'RETURN') {
+                        newStock += item.qty;
+                    } else {
+                        newStock -= item.qty;
+                    }
+                    await product.update({ stock: newStock }, { transaction: t });
+                }
+            }
+        }
+
+        // 3. Create CashFlow (Automated)
+        // Only if there is a payment involved AND not skipped
+        if (!txData.skipCashFlow && (txData.amountPaid > 0 || (txData.type === 'RETURN' && txData.totalAmount < 0))) {
+            const isReturn = txData.type === 'RETURN';
+
+            let cfAmount = 0;
+            if (isReturn) {
+                // For Returns (Refunds), amountPaid is negative, so we take abs
+                cfAmount = Math.abs(txData.amountPaid);
+            } else {
+                // For Sales, Cash In = Amount Paid - Change
+                // If we received 50k and gave 40k change, actual Cash In is 10k
+                const paid = parseFloat(txData.amountPaid) || 0;
+                const change = parseFloat(txData.change) || 0;
+                cfAmount = paid - change;
+            }
+
+            if (cfAmount > 0) {
+                const cfType = isReturn ? 'KELUAR' : 'MASUK'; // Sale = IN, Return = OUT
+                const category = isReturn ? 'Retur Penjualan' : 'Penjualan';
+                const description = isReturn
+                    ? `Refund Retur Transaksi #${txData.id.substring(0, 6)}`
+                    : `Penjualan ke ${txData.customerName || 'Umum'} (Tx: ${txData.id.substring(0, 6)})`;
+
+                await CashFlow.create({
+                    id: Date.now().toString(), // Simple ID generation
+                    date: txData.date,
+                    type: cfType,
+                    amount: cfAmount,
+                    category: category,
+                    description: description,
+                    paymentMethod: txData.paymentMethod,
+                    bankId: txData.bankId,
+                    bankName: txData.bankName
+                }, { transaction: t });
+            }
+        }
+
+        await t.commit();
+        res.json(transaction);
+    } catch (error) {
+        await t.rollback();
+        console.error('Transaction Error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Purchase (Stock In/Return Out) Logic
+app.post('/api/purchases', authenticateToken, async (req, res) => {
+    const t = await sequelize.transaction();
+    try {
+        const purchaseData = req.body;
+        const Purchase = models.Purchase;
+        const Product = models.Product;
+        const CashFlow = models.CashFlow;
+
+        // 1. Create Purchase
+        const purchase = await Purchase.create(purchaseData, { transaction: t });
+
+        // 2. Update Stock
+        if (purchaseData.items && Array.isArray(purchaseData.items)) {
+            for (const item of purchaseData.items) {
+                const product = await Product.findByPk(item.id, { transaction: t });
+                if (product) {
+                    let newStock = product.stock;
+                    if (purchaseData.type === 'RETURN') {
+                        newStock -= item.qty; // Return to supplier = Stock Decrease
+                    } else {
+                        newStock += item.qty; // Purchase from supplier = Stock Increase
+                    }
+                    await product.update({ stock: newStock }, { transaction: t });
+                }
+            }
+        }
+
+        // 3. Create CashFlow
+        if (!purchaseData.skipCashFlow && (purchaseData.amountPaid > 0 || (purchaseData.type === 'RETURN' && purchaseData.totalAmount < 0))) {
+            const isReturn = purchaseData.type === 'RETURN';
+            const amount = Math.abs(purchaseData.amountPaid);
+
+            if (amount > 0) {
+                const cfType = isReturn ? 'MASUK' : 'KELUAR'; // Purchase = OUT, Return = IN (Refund)
+                const category = isReturn ? 'Retur Pembelian' : 'Pembelian Stok';
+                const description = isReturn
+                    ? `Refund Retur Pembelian dari ${purchaseData.supplierName}`
+                    : `Pembelian dari ${purchaseData.supplierName}: ${purchaseData.description}`;
+
+                await CashFlow.create({
+                    id: Date.now().toString(),
+                    date: purchaseData.date,
+                    type: cfType,
+                    amount: amount,
+                    category: category,
+                    description: description,
+                    paymentMethod: purchaseData.paymentMethod,
+                    bankId: purchaseData.bankId,
+                    bankName: purchaseData.bankName
+                }, { transaction: t });
+            }
+        }
+
+        await t.commit();
+        res.json(purchase);
+    } catch (error) {
+        await t.rollback();
+        console.error('Purchase Error:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
 
 const routeMap = {
     Product: 'products',

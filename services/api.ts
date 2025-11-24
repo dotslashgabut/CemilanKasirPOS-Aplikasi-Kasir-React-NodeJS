@@ -295,34 +295,6 @@ export const ApiService = {
             body: JSON.stringify({ ...transaction, date: formattedDate })
         });
         if (!res.ok) throw new Error('Failed to add transaction');
-
-        // Update stock for each item (non-blocking - don't throw error if fails)
-        const isReturn = transaction.type === 'RETURN';
-        for (const item of transaction.items) {
-            try {
-                const productRes = await fetch(`${API_URL}/products/${item.id}`, { headers: getHeaders() });
-                if (productRes.ok) {
-                    const product = await productRes.json();
-                    const parsedProduct = parseProduct(product);
-                    if (isReturn) {
-                        parsedProduct.stock += item.qty;
-                    } else {
-                        parsedProduct.stock -= item.qty;
-                    }
-                    const updateRes = await fetch(`${API_URL}/products/${parsedProduct.id}`, {
-                        method: 'PUT',
-                        headers: getHeaders(),
-                        body: JSON.stringify(parsedProduct)
-                    });
-                    if (!updateRes.ok) {
-                        console.warn(`Failed to update stock for product ${parsedProduct.id}`);
-                    }
-                }
-            } catch (error) {
-                console.warn(`Error updating stock for item ${item.id}:`, error);
-                // Continue with other items - don't throw
-            }
-        }
     },
     updateTransaction: async (transaction: Transaction) => {
         // Convert ISO date to MySQL format
@@ -557,35 +529,6 @@ export const ApiService = {
             body: JSON.stringify({ ...purchase, date: formattedDate })
         });
         if (!res.ok) throw new Error('Failed to add purchase');
-
-        if (purchase.items && purchase.items.length > 0) {
-            const isReturn = purchase.type === 'RETURN';
-            for (const item of purchase.items) {
-                try {
-                    const productRes = await fetch(`${API_URL}/products/${item.id}`, { headers: getHeaders() });
-                    if (productRes.ok) {
-                        const product = await productRes.json();
-                        const parsedProduct = parseProduct(product);
-                        if (isReturn) {
-                            parsedProduct.stock -= item.qty;
-                        } else {
-                            parsedProduct.stock += item.qty;
-                        }
-                        const updateRes = await fetch(`${API_URL}/products/${parsedProduct.id}`, {
-                            method: 'PUT',
-                            headers: getHeaders(),
-                            body: JSON.stringify(parsedProduct)
-                        });
-                        if (!updateRes.ok) {
-                            console.warn(`Failed to update stock for product ${parsedProduct.id} in purchase`);
-                        }
-                    }
-                } catch (error) {
-                    console.warn(`Error updating stock for purchase item ${item.id}:`, error);
-                    // Continue with other items - don't throw
-                }
-            }
-        }
     },
     updatePurchase: async (purchase: Purchase) => {
         // Convert ISO date to MySQL format
@@ -839,8 +782,15 @@ export const ApiService = {
         });
 
         if (!res.ok) {
-            const err = await res.json();
-            throw new Error(err.error || 'Login failed');
+            const text = await res.text();
+            let errorMessage = 'Login failed';
+            try {
+                const err = JSON.parse(text);
+                errorMessage = err.error || errorMessage;
+            } catch (e) {
+                if (text) errorMessage = text;
+            }
+            throw new Error(errorMessage);
         }
 
         return await res.json();

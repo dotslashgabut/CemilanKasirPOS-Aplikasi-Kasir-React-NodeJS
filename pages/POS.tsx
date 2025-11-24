@@ -190,24 +190,7 @@ export const POS: React.FC = () => {
       await StorageService.addTransaction(transaction);
 
       // Add Cashflow Entry for Sale (if paid > 0)
-      if (paid > 0) {
-        const paymentMethodText = paymentMethod === PaymentMethod.TRANSFER
-          ? `Transfer${selectedBank ? ` (${selectedBank.bankName})` : ''}`
-          : paymentMethod === PaymentMethod.CASH
-            ? 'Tunai'
-            : 'Tempo';
-
-        await StorageService.addCashFlow({
-          id: '',
-          date: transaction.date,
-          type: CashFlowType.IN,
-          amount: paid,
-          category: 'Penjualan',
-          description: `Penjualan ke ${customerName} (Tx: ${transaction.id.substring(0, 6)}) via ${paymentMethodText} - ${currentUser.name}`,
-          userId: currentUser.id,
-          userName: currentUser.name
-        });
-      }
+      // Handled by Backend automatically now
 
       // Print Logic
       const settings = await StorageService.getStoreSettings();

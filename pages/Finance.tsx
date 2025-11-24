@@ -237,13 +237,15 @@ export const Finance: React.FC<FinanceProps> = ({ currentUser, defaultTab = 'his
             paymentNote: `Retur dari #${detailTransaction.id.substring(0, 6)}` + (cutDebtAmount > 0 ? ` (Potong Utang: ${formatIDR(cutDebtAmount)})` : ''),
             customerName: detailTransaction.customerName,
             cashierId: currentUser?.id || 'SYSTEM',
-            cashierName: currentUser?.name || 'System'
+            cashierName: currentUser?.name || 'System',
+            skipCashFlow: cutDebtAmount > 0 // Skip backend auto-cashflow if we are cutting debt (complex case)
         };
 
         await StorageService.addTransaction(returnTx);
 
         // 5. Record Cash Out (Hanya jika ada uang tunai yang dikembalikan)
-        if (cashRefundAmount > 0) {
+        // If we cut debt, we skipped backend auto-cashflow, so we must add it manually here if there is a cash refund
+        if (cutDebtAmount > 0 && cashRefundAmount > 0) {
             await StorageService.addCashFlow({
                 id: '',
                 date: now,
@@ -325,20 +327,7 @@ export const Finance: React.FC<FinanceProps> = ({ currentUser, defaultTab = 'his
 
         await StorageService.addPurchase(returnPurchase);
 
-        // Record Cash In (Refund from Supplier)
-        await StorageService.addCashFlow({
-            id: '',
-            date: new Date().toISOString(),
-            type: CashFlowType.IN,
-            amount: totalRefund,
-            category: 'Retur Pembelian',
-            description: `Refund Retur Pembelian dari ${detailPurchase.supplierName} via ${returnPurchaseMethod}${selectedBank ? ` (${selectedBank.bankName})` : ''}`,
-            paymentMethod: returnPurchaseMethod,
-            bankId: returnPurchaseBankId || undefined,
-            bankName: selectedBank?.bankName,
-            userId: currentUser?.id,
-            userName: currentUser?.name
-        });
+        // Record Cash In (Refund from Supplier) - Handled by Backend automatically now
 
         setIsReturnPurchaseModalOpen(false);
         setDetailPurchase(null);
@@ -508,6 +497,15 @@ export const Finance: React.FC<FinanceProps> = ({ currentUser, defaultTab = 'his
             return;
         }
 
+        const remainingDebt = selectedDebt.totalAmount - selectedDebt.amountPaid;
+
+        if (pay > remainingDebt) {
+            alert(`Nominal pembayaran melebihi sisa piutang (${formatIDR(remainingDebt)}).`);
+            return;
+        }
+        const effectivePayment = Math.min(pay, remainingDebt);
+        const change = pay > remainingDebt ? pay - remainingDebt : 0;
+
         const newPaid = selectedDebt.amountPaid + pay;
         const newStatus = newPaid >= selectedDebt.totalAmount ? PaymentStatus.PAID : PaymentStatus.PARTIAL;
         const now = new Date().toISOString(); // Capture exact time
@@ -527,19 +525,24 @@ export const Finance: React.FC<FinanceProps> = ({ currentUser, defaultTab = 'his
             ...selectedDebt,
             amountPaid: newPaid,
             paymentStatus: newStatus,
-            change: newPaid > selectedDebt.totalAmount ? newPaid - selectedDebt.totalAmount : 0,
+            change: change, // Update change for this transaction
             paymentHistory: updatedHistory
         };
 
         await StorageService.updateTransaction(updatedTx);
 
+        let description = `Pelunasan dari ${selectedDebt.customerName} (Tx: ${selectedDebt.id.substring(0, 6)}) via ${repaymentMethod} ${selectedBank ? `(${selectedBank.bankName})` : ''}`;
+        if (change > 0) {
+            description += ` (Terima: ${formatIDR(pay)}, Kembali: ${formatIDR(change)})`;
+        }
+
         await StorageService.addCashFlow({
             id: '',
             date: now,
             type: CashFlowType.IN,
-            amount: pay,
+            amount: effectivePayment,
             category: 'Pelunasan Piutang',
-            description: `Pelunasan dari ${selectedDebt.customerName} (Tx: ${selectedDebt.id.substring(0, 6)}) via ${repaymentMethod} ${selectedBank ? `(${selectedBank.bankName})` : ''}`,
+            description: description,
             paymentMethod: repaymentMethod,
             bankId: repaymentBankId,
             bankName: selectedBank?.bankName,
@@ -561,6 +564,12 @@ export const Finance: React.FC<FinanceProps> = ({ currentUser, defaultTab = 'his
 
         if (payableRepaymentMethod === PaymentMethod.TRANSFER && !payableBankId) {
             alert("Pilih rekening bank sumber transfer.");
+            return;
+        }
+
+        const remainingDebt = selectedPayable.totalAmount - selectedPayable.amountPaid;
+        if (pay > remainingDebt) {
+            alert(`Nominal pembayaran melebihi sisa utang (${formatIDR(remainingDebt)}).`);
             return;
         }
 
@@ -693,25 +702,7 @@ export const Finance: React.FC<FinanceProps> = ({ currentUser, defaultTab = 'his
             await StorageService.addPurchase(newPurchase);
             console.log("✅ Purchase saved successfully!");
 
-            // If paid amount > 0, record cash out
-            if (paid > 0) {
-                const cashFlowData = {
-                    id: '',
-                    date: now,
-                    type: CashFlowType.OUT,
-                    amount: paid,
-                    category: 'Pembelian Stok',
-                    description: `Pembelian dari ${supplier.name}: ${description} via ${purchaseForm.paymentMethod} ${selectedBank ? `(${selectedBank.bankName})` : ''}`,
-                    paymentMethod: purchaseForm.paymentMethod,
-                    bankId: purchaseForm.bankId || undefined,
-                    bankName: selectedBank?.bankName,
-                    userId: currentUser?.id,
-                    userName: currentUser?.name
-                };
-                console.log("💰 Saving cash flow:", cashFlowData);
-                await StorageService.addCashFlow(cashFlowData);
-                console.log("✅ Cash flow saved successfully!");
-            }
+            // If paid amount > 0, record cash out - Handled by Backend automatically now
 
             // Success feedback
             alert("✅ Pembelian berhasil dicatat!");
@@ -1407,7 +1398,7 @@ export const Finance: React.FC<FinanceProps> = ({ currentUser, defaultTab = 'his
                                         >
                                             <option value="">-- Pilih --</option>
                                             {banks.map(b => (
-                                                <option key={b.id} value={b.id}>{b.bankName}</option>
+                                                <option key={b.id} value={b.id}>{b.bankName} - {b.accountNumber}</option>
                                             ))}
                                         </select>
                                     </div>
@@ -1603,7 +1594,7 @@ export const Finance: React.FC<FinanceProps> = ({ currentUser, defaultTab = 'his
                                         >
                                             <option value="">-- Pilih --</option>
                                             {banks.map(b => (
-                                                <option key={b.id} value={b.id}>{b.bankName}</option>
+                                                <option key={b.id} value={b.id}>{b.bankName} - {b.accountNumber}</option>
                                             ))}
                                         </select>
                                     </div>
@@ -1762,7 +1753,7 @@ export const Finance: React.FC<FinanceProps> = ({ currentUser, defaultTab = 'his
                                     >
                                         <option value="">-- Bank --</option>
                                         {banks.map(b => (
-                                            <option key={b.id} value={b.id}>{b.bankName}</option>
+                                            <option key={b.id} value={b.id}>{b.bankName} - {b.accountNumber}</option>
                                         ))}
                                     </select>
                                 )}
@@ -1917,39 +1908,50 @@ export const Finance: React.FC<FinanceProps> = ({ currentUser, defaultTab = 'his
                                     <span>Total Dibayar</span>
                                     <span>{formatIDR(detailTransaction.amountPaid)}</span>
                                 </div>
-                                <div className="flex justify-between text-red-600 font-bold">
-                                    <span>Sisa Tagihan</span>
-                                    <span>{formatIDR(detailTransaction.totalAmount - detailTransaction.amountPaid)}</span>
-                                </div>
+                                {(() => {
+                                    const remaining = detailTransaction.totalAmount - detailTransaction.amountPaid;
+                                    if (remaining > 0) {
+                                        // Ada piutang / belum lunas
+                                        return (
+                                            <div className="flex justify-between text-red-600 font-bold">
+                                                <span>Sisa Tagihan</span>
+                                                <span>{formatIDR(remaining)}</span>
+                                            </div>
+                                        );
+                                    } else if (remaining < 0) {
+                                        // Ada kembalian (customer bayar lebih)
+                                        return (
+                                            <div className="flex justify-between text-green-600 font-bold">
+                                                <span>Kembalian</span>
+                                                <span>{formatIDR(Math.abs(remaining))}</span>
+                                            </div>
+                                        );
+                                    }
+                                    // remaining === 0, lunas pas
+                                    return null;
+                                })()}
                             </div>
                         </div>
                         <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
                             {(currentUser?.role === UserRole.OWNER || currentUser?.role === UserRole.SUPERADMIN) && (
-                                <div className="group relative">
-                                    <button
-                                        className="text-red-500 p-2 rounded-lg hover:bg-red-50 transition-colors"
-                                        title="Hapus Transaksi"
-                                    >
-                                        <Trash2 size={20} />
-                                    </button>
-                                    <button
-                                        onClick={async () => {
-                                            if (confirm('PERINGATAN: Menghapus transaksi ini akan membatalkan semua perubahan stok, menghapus riwayat pembayaran, dan menghapus arus kas terkait. Tindakan ini tidak dapat dibatalkan. Lanjutkan?')) {
-                                                try {
-                                                    await StorageService.deleteTransaction(detailTransaction.id);
-                                                    setDetailTransaction(null);
-                                                    alert('Transaksi berhasil dihapus.');
-                                                } catch (e) {
-                                                    alert('Gagal menghapus transaksi.');
-                                                    console.error(e);
-                                                }
+                                <button
+                                    onClick={async () => {
+                                        if (confirm('PERINGATAN: Menghapus transaksi ini akan membatalkan semua perubahan stok, menghapus riwayat pembayaran, dan menghapus arus kas terkait. Tindakan ini tidak dapat dibatalkan. Lanjutkan?')) {
+                                            try {
+                                                await StorageService.deleteTransaction(detailTransaction.id);
+                                                setDetailTransaction(null);
+                                                alert('Transaksi berhasil dihapus.');
+                                            } catch (e) {
+                                                alert('Gagal menghapus transaksi.');
+                                                console.error(e);
                                             }
-                                        }}
-                                        className="absolute left-full ml-2 top-1/2 -translate-y-1/2 bg-red-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-lg z-10 pointer-events-none group-hover:pointer-events-auto"
-                                    >
-                                        Hapus Transaksi (Admin Only)
-                                    </button>
-                                </div>
+                                        }
+                                    }}
+                                    className="text-red-500 p-2 rounded-lg hover:bg-red-50 transition-colors"
+                                    title="Hapus Transaksi (Admin Only)"
+                                >
+                                    <Trash2 size={20} />
+                                </button>
                             )}
                             <div className="flex justify-end gap-2 ml-auto">
                                 {detailTransaction.type !== TransactionType.RETURN && (
@@ -2109,31 +2111,24 @@ export const Finance: React.FC<FinanceProps> = ({ currentUser, defaultTab = 'his
                         </div>
                         <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-between items-center">
                             {(currentUser?.role === UserRole.OWNER || currentUser?.role === UserRole.SUPERADMIN) && (
-                                <div className="group relative">
-                                    <button
-                                        className="text-red-500 p-2 rounded-lg hover:bg-red-50 transition-colors"
-                                        title="Hapus Pembelian"
-                                    >
-                                        <Trash2 size={20} />
-                                    </button>
-                                    <button
-                                        onClick={async () => {
-                                            if (confirm('PERINGATAN: Menghapus pembelian ini akan membatalkan perubahan stok dan menghapus arus kas terkait. Tindakan ini tidak dapat dibatalkan. Lanjutkan?')) {
-                                                try {
-                                                    await StorageService.deletePurchase(detailPurchase.id);
-                                                    setDetailPurchase(null);
-                                                    alert('Pembelian berhasil dihapus.');
-                                                } catch (e) {
-                                                    alert('Gagal menghapus pembelian.');
-                                                    console.error(e);
-                                                }
+                                <button
+                                    onClick={async () => {
+                                        if (confirm('PERINGATAN: Menghapus pembelian ini akan membatalkan perubahan stok dan menghapus arus kas terkait. Tindakan ini tidak dapat dibatalkan. Lanjutkan?')) {
+                                            try {
+                                                await StorageService.deletePurchase(detailPurchase.id);
+                                                setDetailPurchase(null);
+                                                alert('Pembelian berhasil dihapus.');
+                                            } catch (e) {
+                                                alert('Gagal menghapus pembelian.');
+                                                console.error(e);
                                             }
-                                        }}
-                                        className="absolute left-full ml-2 top-1/2 -translate-y-1/2 bg-red-600 text-white text-xs font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-lg z-10 pointer-events-none group-hover:pointer-events-auto"
-                                    >
-                                        Hapus Pembelian (Admin Only)
-                                    </button>
-                                </div>
+                                        }
+                                    }}
+                                    className="text-red-500 p-2 rounded-lg hover:bg-red-50 transition-colors"
+                                    title="Hapus Pembelian (Admin Only)"
+                                >
+                                    <Trash2 size={20} />
+                                </button>
                             )}
                             <div className="flex justify-end gap-2 ml-auto">
                                 {detailPurchase.type !== PurchaseType.RETURN && (
@@ -2358,7 +2353,7 @@ export const Finance: React.FC<FinanceProps> = ({ currentUser, defaultTab = 'his
                                         >
                                             <option value="">-- Pilih Rekening --</option>
                                             {banks.map(b => (
-                                                <option key={b.id} value={b.id}>{b.bankName}</option>
+                                                <option key={b.id} value={b.id}>{b.bankName} - {b.accountNumber}</option>
                                             ))}
                                         </select>
                                     </div>
@@ -2573,7 +2568,7 @@ export const Finance: React.FC<FinanceProps> = ({ currentUser, defaultTab = 'his
                                             >
                                                 <option value="">-- Pilih Bank --</option>
                                                 {banks.map(b => (
-                                                    <option key={b.id} value={b.id}>{b.bankName}</option>
+                                                    <option key={b.id} value={b.id}>{b.bankName} - {b.accountNumber}</option>
                                                 ))}
                                             </select>
                                         </div>

@@ -366,7 +366,8 @@ export const CustomerHistory: React.FC<CustomerHistoryProps> = ({ currentUser })
                                     <div className="flex items-center">Total <SortIcon column="totalAmount" /></div>
                                 </th>
                                 <th className="p-4 font-medium">Dibayar</th>
-                                <th className="p-4 font-medium">Sisa/Piutang</th>
+                                <th className="p-4 font-medium">Piutang</th>
+                                <th className="p-4 font-medium">Kembalian</th>
                                 <th className="p-4 font-medium">Status</th>
                                 <th className="p-4 font-medium">Metode</th>
                                 <th className="p-4 font-medium">Kasir</th>
@@ -376,7 +377,7 @@ export const CustomerHistory: React.FC<CustomerHistoryProps> = ({ currentUser })
                         <tbody className="divide-y divide-slate-100">
                             {filteredTransactions.length === 0 && (
                                 <tr>
-                                    <td colSpan={10} className="p-8 text-center text-slate-400">Tidak ada transaksi.</td>
+                                    <td colSpan={11} className="p-8 text-center text-slate-400">Tidak ada transaksi.</td>
                                 </tr>
                             )}
                             {visibleTransactions.map(t => (
@@ -391,7 +392,18 @@ export const CustomerHistory: React.FC<CustomerHistoryProps> = ({ currentUser })
                                     <td className="p-4 font-medium text-slate-800">{t.customerName}</td>
                                     <td className="p-4 font-semibold text-slate-700">{formatIDR(t.totalAmount)}</td>
                                     <td className="p-4 text-green-600">{formatIDR(t.amountPaid)}</td>
-                                    <td className="p-4 text-red-600 font-medium">{formatIDR(t.totalAmount - t.amountPaid)}</td>
+                                    <td className="p-4 text-red-600 font-medium">
+                                        {(() => {
+                                            const remaining = t.totalAmount - t.amountPaid;
+                                            return remaining > 0 ? formatIDR(remaining) : '-';
+                                        })()}
+                                    </td>
+                                    <td className="p-4 text-green-600 font-medium">
+                                        {(() => {
+                                            const remaining = t.totalAmount - t.amountPaid;
+                                            return remaining < 0 ? formatIDR(Math.abs(remaining)) : '-';
+                                        })()}
+                                    </td>
                                     <td className="p-4">
                                         <span className={`px-2 py-1 rounded text-xs font-bold ${t.type === TransactionType.RETURN
                                             ? 'bg-purple-100 text-purple-600'
@@ -417,7 +429,7 @@ export const CustomerHistory: React.FC<CustomerHistoryProps> = ({ currentUser })
                             ))}
                             {visibleTransactions.length < filteredTransactions.length && (
                                 <tr>
-                                    <td colSpan={10} className="p-4 text-center text-slate-400">
+                                    <td colSpan={11} className="p-4 text-center text-slate-400">
                                         <div ref={loadMoreRef}>Loading more...</div>
                                     </td>
                                 </tr>
@@ -565,10 +577,25 @@ export const CustomerHistory: React.FC<CustomerHistoryProps> = ({ currentUser })
                                     <span>Total Dibayar</span>
                                     <span>{formatIDR(detailTransaction.amountPaid)}</span>
                                 </div>
-                                <div className="flex justify-between text-red-600 font-bold">
-                                    <span>Sisa Tagihan</span>
-                                    <span>{formatIDR(detailTransaction.totalAmount - detailTransaction.amountPaid)}</span>
-                                </div>
+                                {(() => {
+                                    const remaining = detailTransaction.totalAmount - detailTransaction.amountPaid;
+                                    if (remaining > 0) {
+                                        return (
+                                            <div className="flex justify-between text-red-600 font-bold">
+                                                <span>Sisa Tagihan</span>
+                                                <span>{formatIDR(remaining)}</span>
+                                            </div>
+                                        );
+                                    } else if (remaining < 0) {
+                                        return (
+                                            <div className="flex justify-between text-green-600 font-bold">
+                                                <span>Kembalian</span>
+                                                <span>{formatIDR(Math.abs(remaining))}</span>
+                                            </div>
+                                        );
+                                    }
+                                    return null;
+                                })()}
                             </div>
                         </div>
                         <div className="p-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-2">
