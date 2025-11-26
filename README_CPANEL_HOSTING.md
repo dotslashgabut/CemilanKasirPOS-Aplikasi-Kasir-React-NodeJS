@@ -33,7 +33,10 @@ Panduan ini menjelaskan cara meng-hosting aplikasi Cemilan KasirPOS menggunakan 
     DB_NAME=u12345_cemilan
     JWT_SECRET=rahasia_super_aman_ganti_ini
     PORT=3000
+    NODE_ENV=production
     ```
+
+    > **PENTING (KEAMANAN):** Pastikan `NODE_ENV=production` ditambahkan. Ini akan menyembunyikan pesan error detail dari pengguna (mencegah kebocoran info sistem). Lihat `SECURITY_AUDIT.md` untuk detailnya.
 
 ## 🚀 Langkah 3: Konfigurasi Node.js di cPanel
 
@@ -103,3 +106,9 @@ Panduan ini menjelaskan cara meng-hosting aplikasi Cemilan KasirPOS menggunakan 
     *   Pastikan user DB punya hak akses penuh.
 3.  **Changes not reflecting**:
     *   Setiap kali mengubah kode backend (misal upload file baru), Anda harus klik **Restart** di menu Setup Node.js App.
+
+## 🔒 Referensi Keamanan
+
+Aplikasi ini telah diaudit keamanannya. Pastikan Anda mengikuti langkah-langkah di atas (terutama setting `NODE_ENV`) untuk memastikan deployment Anda aman.
+
+Baca **[SECURITY_AUDIT.md](SECURITY_AUDIT.md)** untuk laporan lengkap dan detail perbaikan keamanan yang telah diterapkan.

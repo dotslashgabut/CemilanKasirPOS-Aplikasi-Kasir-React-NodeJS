@@ -191,12 +191,17 @@ jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
  4. **SQL Injection Protection**: ✅ Sequelize ORM menggunakan parameterized queries secara otomatis.
  5. **Environment Variables**: ✅ `JWT_SECRET` dan database credentials disimpan di `server/.env` dan di-ignore oleh git.
  6. **Rate Limiting**: ✅ Diimplementasikan menggunakan `express-rate-limit` (Global + Strict Login Limiter).
+ 7. **Error Handling**: ✅ Detail error disembunyikan di production (`NODE_ENV=production`).
+ 8. **Data Sanitization**: ✅ Password hash tidak dikirim ke client.
  
  ### Rekomendasi Production:
  
  1. **HTTPS only**: Wajib gunakan HTTPS agar token tidak dicuri di jaringan.
  2. **Environment Variables**: Pastikan `.env` file diisi dengan secret yang kuat.
  3. **CORS Configuration**: Pastikan origin di `server/index.js` di-set ke domain frontend production.
+ 4. **Set NODE_ENV**: Wajib set `NODE_ENV=production` untuk mengaktifkan fitur keamanan error handling.
+ 
+ > Baca **[SECURITY_AUDIT.md](./SECURITY_AUDIT.md)** untuk laporan audit keamanan lengkap.
 
 ## Troubleshooting
 

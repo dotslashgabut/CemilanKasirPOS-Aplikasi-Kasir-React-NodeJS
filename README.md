@@ -17,13 +17,9 @@
 
 Dibuat dengan bantuan [Google AI Studio App](https://aistudio.google.com/apps), [Google Antigravity](https://antigravity.google/), Agent model: Gemini 3 Pro dan Claude Sonnet 4.5
 
-Untuk menambahkan Gemini API, buat file `env.local` isi dengan Gemini API anda.
-```
-GEMINI_API_KEY=PLACEHOLDER_API_KEY
-```
-_Kami belum sempat mencobanya sih._
+Fitur AI di aplikasi ini yang menggunakan Gemini API, kami belum sempat mencobanya.
 
-> Untuk versi lainnya dengan pendekatan database yang berbeda, seperti localStorage, IndexedDB-Dexie, hybrid database (IndexedDB-Dexie + MySQL), dapat dicek di laman rilis repo Cemilan KasirPOS Nusantara - Testing https://github.com/dotslashgabut/cemilan-kasirpos-test/releases
+> Untuk versi Cemilan KasirPOS dengan pendekatan database yang berbeda, seperti localStorage, IndexedDB-Dexie, hybrid database (IndexedDB-Dexie + MySQL), dapat dicek di laman rilis repo Cemilan KasirPOS Nusantara - Testing https://github.com/dotslashgabut/cemilan-kasirpos-test/releases
 
 > Video tutorialnya cek aja nanti di [DotSlashGabut YouTube](https://www.youtube.com/@dotslashgabut), _belum sempet bikin_
 
@@ -34,6 +30,14 @@ _Kami belum sempat mencobanya sih._
 > via Ko-fi [**https://ko-fi.com/dotslashgabut**](https://ko-fi.com/dotslashgabut)
 
 > _Semoga sistem POS (Point of Sale) - Aplikasi Kasir ini bermanfaat bagi semuanya, terutama warung kecil dan UMKM. Terima Kasih._
+
+## 📃 Panduan singkat instalasi dan penggunaan aplikasi Cemilan KasirPOS
+
+Aplikasi ini dirilis dalam dua file arsip berbeda. Untuk file arsip dengan nama 'full', itu sudah termasuk node module yang diperlukan, siap pakai. Sedangkan untuk file arsip dengan nama 'test', belum termasuk node modul, file-filenya sama seperti yang ada di repository, diperlukan penginstalan modul-modulnya.
+
+Panduan instalasi dan penggunaan untuk Development, selengkapnya bisa dibaca di **[README_DEVELOPMENT.md](./README_DEVELOPMENT.md)**, dan untuk Production bisa dibaca di **[README_PRODUCTION.md](./README_PRODUCTION.md)**
+
+## 🍬 Cemilan KasirPOS Nusantara
 
 Cemilan KasirPOS is a modern, feature-rich Point of Sale (POS) application designed for small to medium-sized businesses in Indonesia. Built with React, TypeScript, and Vite, it offers a fast and responsive interface for managing sales, inventory, customers, and finances.
 
@@ -254,6 +258,10 @@ See [README_DEVELOPMENT.md](./README_DEVELOPMENT.md) for detailed setup instruct
   - **Cashier**: Restricted to POS and basic sales operations.
 - **Rate Limiting**: Brute-force protection on login endpoints.
 - **CORS Protection**: Restricted API access to trusted domains.
+- **Production Error Handling**: Detailed error messages are hidden in production to prevent information leakage.
+- **Data Sanitization**: Sensitive data (like password hashes) is automatically stripped from API responses.
+
+> For a detailed security report, see **[SECURITY_AUDIT.md](./SECURITY_AUDIT.md)**.
 
 ### Default Login Credentials
 
@@ -268,10 +276,11 @@ This application can be deployed in various ways:
 
 ### 📖 Available Guides:
 
-1. **[Development Guide](./README_DEVELOPMENT.md)** - Development guide and software installation
-2. **[cPanel Hosting Guide](./README_CPANEL_HOSTING.md)** - Deploy to shared hosting with cPanel
-3. **[Docker Deployment](./README_DOCKER.md)** - Run with Docker and Docker Compose
-4. **[Production & CORS Guide](./README_PRODUCTION.md)** - Detailed build and CORS configuration steps
+1. **[Development Guide](./README_DEVELOPMENT.md)** - Panduan untuk setup lingkungan pengembangan (development environment) untuk aplikasi Cemilan KasirPOS menggunakan Backend Node.js (Express + Sequelize)
+2. **[Production Guide](./README_PRODUCTION.md)** - Langkah-langkah persiapan sebelum build (build preparation) dan konfigurasi untuk deployment aplikasi ke server produksi (live server) menggunakan Backend Node.js
+3. **[cPanel Hosting Guide](./README_CPANEL_HOSTING.md)** - Panduan deploy ke shared hosting menggunakan cPanel
+4. **[Docker Deployment](./README_DOCKER.md)** - Panduan menjalankan aplikasi menggunakan Docker dan Docker Compose
+5. **[Production & CORS Guide](./README_PRODUCTION.md)** - Langkah-langkah detail build dan konfigurasi CORS
 
 ## 📝 License
 
@@ -320,6 +329,10 @@ Cemilan KasirPOS adalah aplikasi Point of Sale (POS) modern yang kaya fitur, dir
   - **Cashier**: Terbatas pada POS dan operasi penjualan dasar.
 - **Rate Limiting**: Perlindungan brute-force pada login.
 - **Proteksi CORS**: Akses API dibatasi hanya untuk domain terpercaya.
+- **Penanganan Error Produksi**: Pesan error detail disembunyikan di mode produksi untuk mencegah kebocoran informasi.
+- **Sanitasi Data**: Data sensitif (seperti hash password) otomatis dihapus dari respon API.
+
+> Untuk laporan keamanan detail, lihat **[SECURITY_AUDIT.md](./SECURITY_AUDIT.md)**.
 
 ### Manajemen Pengguna & Orang
 
@@ -436,10 +449,11 @@ Aplikasi ini dapat di-deploy dengan berbagai cara:
 
 ### 📖 Panduan yang Tersedia:
 
-1. **[Development Guide](./README_DEVELOPMENT.md)** - Panduan pengembangan dan instalasi perangkat lunak
-2. **[Panduan Hosting cPanel](./README_CPANEL_HOSTING.md)** - Deploy ke shared hosting dengan cPanel
-3. **[Deployment Docker](./README_DOCKER.md)** - Jalankan dengan Docker dan Docker Compose
-4. **[Production & CORS Guide](./README_PRODUCTION.md)** - Detil build dan tahap configurasi CORS
+1. **[Development Guide](./README_DEVELOPMENT.md)** - Panduan untuk setup lingkungan pengembangan (development environment) untuk aplikasi Cemilan KasirPOS menggunakan Backend Node.js (Express + Sequelize)
+2. **[Production Guide](./README_PRODUCTION.md)** - Langkah-langkah persiapan sebelum build (build preparation) dan konfigurasi untuk deployment aplikasi ke server produksi (live server) menggunakan Backend Node.js
+3. **[Panduan Hosting cPanel](./README_CPANEL_HOSTING.md)** - Deploy ke shared hosting dengan cPanel
+4. **[Deployment Docker](./README_DOCKER.md)** - Jalankan dengan Docker dan Docker Compose
+5. **[Production & CORS Guide](./README_PRODUCTION.md)** - Detil build dan tahap konfigurasi CORS
 
 ## 📝 Lisensi
 

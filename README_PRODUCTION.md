@@ -59,6 +59,11 @@ Sebelum menjalankan perintah build, pastikan konfigurasi aplikasi sudah benar.
    JWT_SECRET=rahasia_super_aman_ganti_ini_dengan_string_random
    NODE_ENV=production
    ```
+   
+   > **CRITICAL SECURITY NOTE:** 
+   > Pastikan `NODE_ENV=production` selalu diset di server produksi. 
+   > Setting ini mengaktifkan fitur keamanan yang **menyembunyikan detail error (stack traces)** dari pengguna akhir. 
+   > Jika tidak diset, informasi sensitif sistem bisa bocor melalui pesan error. Lihat `SECURITY_AUDIT.md` untuk detailnya.
 
 2. **Frontend (React)**:
    
@@ -246,3 +251,12 @@ mysqldump -u user -p database_name > backup_$(date +%Y%m%d).sql
 
 # Atau setup cron job untuk backup otomatis
 ```
+
+---
+
+## 8. Referensi Keamanan
+
+Untuk detail lebih lanjut mengenai audit keamanan dan perbaikan yang telah diterapkan (seperti sanitasi data user dan error handling), silakan baca dokumen:
+
+**[SECURITY_AUDIT.md](SECURITY_AUDIT.md)**
+

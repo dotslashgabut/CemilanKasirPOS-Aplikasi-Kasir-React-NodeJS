@@ -71,7 +71,9 @@ DB_HOST=localhost
 
 # Server Configuration
 PORT=3001
+PORT=3001
 NODE_ENV=development
+# Set ke 'production' untuk menyembunyikan detail error (stack traces)
 
 # Security
 JWT_SECRET=rahasia_development_123_ganti_di_production
@@ -329,6 +331,15 @@ Jika menggunakan file SQL dengan dummy data:
 - **Kasir**: username/password sesuai data di database
 
 > **Penting**: Ganti semua password default sebelum deployment ke production!
+
+## 🛡️ Catatan Keamanan (Security Note)
+
+Aplikasi ini memiliki fitur keamanan yang bergantung pada environment variable `NODE_ENV`.
+
+*   **Development (`NODE_ENV=development`)**: Error akan ditampilkan secara detail (stack trace) untuk memudahkan debugging.
+*   **Production (`NODE_ENV=production`)**: Error detail akan disembunyikan dan diganti dengan pesan generik untuk keamanan.
+
+> Pastikan Anda membaca **[SECURITY_AUDIT.md](./SECURITY_AUDIT.md)** untuk memahami audit keamanan dan praktik terbaik sebelum melakukan deployment.
 
 ## 📝 Git Workflow
 

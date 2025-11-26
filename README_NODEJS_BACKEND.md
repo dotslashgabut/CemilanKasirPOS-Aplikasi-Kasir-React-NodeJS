@@ -38,7 +38,11 @@ DB_HOST=localhost
 PORT=3001
 
 # Keamanan (JWT)
+# Keamanan (JWT)
 JWT_SECRET=rahasia_dapur_cemilan_kasirpos_2025_secure_key
+
+# Production Mode (PENTING: Sembunyikan Error Detail)
+NODE_ENV=production
 ```
 > **Catatan:** Sesuaikan `DB_USER` dan `DB_PASS` dengan konfigurasi MySQL lokal Anda.
 
@@ -93,6 +97,11 @@ Server menggunakan `sequelize.sync({ alter: true })` yang secara otomatis memper
 Sistem mendukung dua jenis password untuk memudahkan migrasi:
 *   **Plain Text:** Untuk pengguna lama yang belum mereset password.
 *   **Bcrypt Hash:** Untuk keamanan standar. Sistem akan otomatis meng-hash password plain text saat login pertama kali (opsional, logika ada di `index.js`).
+
+### 4. Security Hardening
+*   **Error Hiding:** Saat `NODE_ENV=production`, detail error stack trace disembunyikan dari client.
+*   **Data Sanitization:** Password hash dihapus dari response API.
+*   Lihat **[SECURITY_AUDIT.md](./SECURITY_AUDIT.md)** untuk detail lengkap.
 
 ## 🛠 Troubleshooting
 

@@ -11,6 +11,13 @@ import rateLimit from 'express-rate-limit';
 
 dotenv.config();
 
+const getSafeError = (error) => {
+    if (process.env.NODE_ENV === 'production') {
+        return 'An unexpected error occurred. Please contact support.';
+    }
+    return error.message || String(error);
+};
+
 const app = express();
 
 // Security Middleware
@@ -102,10 +109,13 @@ app.post('/api/login', loginLimiter, async (req, res) => {
             { expiresIn: '24h' }
         );
 
-        res.json({ token, user });
+        const userWithoutPassword = user.toJSON();
+        delete userWithoutPassword.password;
+
+        res.json({ token, user: userWithoutPassword });
     } catch (error) {
         console.error('Login error:', error);
-        res.status(500).json({ error: 'Internal server error' });
+        res.status(500).json({ error: getSafeError(error) });
     }
 });
 
@@ -116,21 +126,29 @@ const createCrudRoutes = (modelName) => {
 
     router.get('/', authenticateToken, async (req, res) => {
         try {
-            const items = await Model.findAll();
+            const options = {};
+            if (modelName === 'User') {
+                options.attributes = { exclude: ['password'] };
+            }
+            const items = await Model.findAll(options);
             res.json(items);
         } catch (error) {
             console.error(`Error fetching ${modelName}:`, error);
-            res.status(500).json({ error: error.message });
+            res.status(500).json({ error: getSafeError(error) });
         }
     });
 
     router.get('/:id', authenticateToken, async (req, res) => {
         try {
-            const item = await Model.findByPk(req.params.id);
+            const options = {};
+            if (modelName === 'User') {
+                options.attributes = { exclude: ['password'] };
+            }
+            const item = await Model.findByPk(req.params.id, options);
             if (item) res.json(item);
             else res.status(404).json({ error: 'Not found' });
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            res.status(500).json({ error: getSafeError(error) });
         }
     });
 
@@ -141,10 +159,16 @@ const createCrudRoutes = (modelName) => {
                 req.body.password = await bcrypt.hash(req.body.password, 10);
             }
             const item = await Model.create(req.body);
-            res.json(item);
+
+            let responseItem = item.toJSON();
+            if (modelName === 'User') {
+                delete responseItem.password;
+            }
+
+            res.json(responseItem);
         } catch (error) {
             console.error(`Error creating ${modelName}:`, error);
-            res.status(500).json({ error: error.message });
+            res.status(500).json({ error: getSafeError(error) });
         }
     });
 
@@ -171,13 +195,18 @@ const createCrudRoutes = (modelName) => {
                 if (!existing) {
                     // Create it
                     const newItem = await Model.create({ ...req.body, id: req.params.id });
-                    res.json(newItem);
+
+                    let responseItem = newItem.toJSON();
+                    if (modelName === 'User') {
+                        delete responseItem.password;
+                    }
+                    res.json(responseItem);
                 } else {
                     res.status(404).json({ error: 'Not found' });
                 }
             }
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            res.status(500).json({ error: getSafeError(error) });
         }
     });
 
@@ -192,7 +221,7 @@ const createCrudRoutes = (modelName) => {
                 res.status(404).json({ error: 'Not found' });
             }
         } catch (error) {
-            res.status(500).json({ error: error.message });
+            res.status(500).json({ error: getSafeError(error) });
         }
     });
 
@@ -210,7 +239,7 @@ const createCrudRoutes = (modelName) => {
             res.json(result);
         } catch (error) {
             console.error(`Error batch inserting ${modelName}:`, error);
-            res.status(500).json({ error: error.message });
+            res.status(500).json({ error: getSafeError(error) });
         }
     });
 
@@ -294,7 +323,7 @@ app.post('/api/transactions', authenticateToken, async (req, res) => {
     } catch (error) {
         await t.rollback();
         console.error('Transaction Error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: getSafeError(error) });
     }
 });
 
@@ -358,7 +387,7 @@ app.post('/api/purchases', authenticateToken, async (req, res) => {
     } catch (error) {
         await t.rollback();
         console.error('Purchase Error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: getSafeError(error) });
     }
 });
 
@@ -407,7 +436,7 @@ app.delete('/api/transactions/:id', authenticateToken, async (req, res) => {
     } catch (error) {
         await t.rollback();
         console.error('Delete Transaction Error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: getSafeError(error) });
     }
 });
 
@@ -456,7 +485,7 @@ app.delete('/api/purchases/:id', authenticateToken, async (req, res) => {
     } catch (error) {
         await t.rollback();
         console.error('Delete Purchase Error:', error);
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ error: getSafeError(error) });
     }
 });
 

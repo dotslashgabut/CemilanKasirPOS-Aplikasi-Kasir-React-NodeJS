@@ -1,6 +1,8 @@
 # Panduan Docker Deployment
 
-Panduan ini menjelaskan cara menjalankan aplikasi Cemilan KasirPOS menggunakan Docker dan Docker Compose.
+Panduan ini menjelaskan cara menjalankan 6. **Rate Limiting**: ✅ Diimplementasikan menggunakan `express-rate-limit` (Global + Strict Login Limiter).
+ 7. **Error Handling**: ✅ Detail error disembunyikan di production (`NODE_ENV=production`).
+ 8. **Data Sanitization**: ✅ Password hash tidak dikirim ke client.
 
 ## 📋 Prasyarat
 
@@ -136,6 +138,7 @@ services:
       DB_NAME: cemilankasirpos
       PORT: 3001
       JWT_SECRET: ${JWT_SECRET:-secret}
+      NODE_ENV: production
     depends_on:
       - mysql
     networks:
@@ -241,7 +244,11 @@ curl http://localhost:3001/api/products
 ```bash
 # .env.example
 MYSQL_ROOT_PASSWORD=CHANGE_THIS
-MYSQL_PASSWORD=CHANGE_THIS
+# Keamanan (JWT)
+JWT_SECRET=rahasia_dapur_cemilan_kasirpos_2025_secure_key
+
+# Production Mode (PENTING: Sembunyikan Error Detail)
+NODE_ENV=production
 ```
 
 ### 2. Secrets Management
@@ -291,6 +298,12 @@ services:
       - /var/cache/nginx
 ```
 
+### 4. Security Hardening
+*   **Error Hiding:** Saat `NODE_ENV=production`, detail error stack trace disembunyikan dari client.
+*   **Data Sanitization:** Password hash dihapus dari response API.
+*   **Bcrypt Hash:** Untuk keamanan standar. Sistem akan otomatis meng-hash password plain text saat login pertama kali (opsional, logika ada di `index.js`).
+*   Lihat **[SECURITY_AUDIT.md](./SECURITY_AUDIT.md)** untuk detail lengkap.
+
 ## 🌐 Deployment ke Cloud
 
 ### Docker Hub
@@ -310,10 +323,10 @@ docker push yourusername/kasirpintar-backend:latest
 
 ### Digital Ocean / AWS / GCP
 
-1. **Buat VM/Droplet** dengan Docker pre-installed
-2. **Clone repo** dan setup `.env`
-3. **Jalankan** `docker-compose up -d`
-4. **Setup domain** dan SSL (Let's Encrypt)
+1.  **Buat VM/Droplet** dengan Docker pre-installed
+2.  **Clone repo** dan setup `.env`
+3.  **Jalankan** `docker-compose up -d`
+4.  **Setup domain** dan SSL (Let's Encrypt)
 
 ```bash
 # Install certbot
@@ -443,6 +456,15 @@ location /api {
 - [ ] API_URL di frontend sudah benar
 - [ ] Test semua fitur utama
 - [ ] Documentation update
+- [ ] **NODE_ENV=production** is set (Critical for security)
+- [ ] **Rate Limiting**: ✅ Diimplementasikan menggunakan `express-rate-limit` (Global + Strict Login Limiter).
+- [ ] **Error Handling**: ✅ Detail error disembunyikan di production (`NODE_ENV=production`).
+- [ ] **Data Sanitization**: ✅ Password hash tidak dikirim ke client.
+- [ ] **CORS Configuration**: Pastikan origin di `server/index.js` di-set ke domain frontend production.
+- [ ] **Set NODE_ENV**: Wajib set `NODE_ENV=production` untuk mengaktifkan fitur keamanan error handling.
+
+> Baca **[SECURITY_AUDIT.md](./SECURITY_AUDIT.md)** untuk laporan audit keamanan lengkap.
+> For detailed security audit and hardening, see **[SECURITY_AUDIT.md](./SECURITY_AUDIT.md)**.
 
 ---
 
