@@ -75,8 +75,6 @@ if exist "server\" (
     echo    If database connection fails, close terminal. Start Laragon (Apache + MySQL)
     echo.
 ) else (
-    echo [4/4] Server folder not found
-    echo.
     echo Go to server folder and run 'npm start' or 'node index.js'
     echo   Backend:  http://localhost:3001
     echo.
