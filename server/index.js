@@ -25,7 +25,30 @@ const app = express();
 app.use(helmet());
 app.use(cookieParser());
 app.use(cors({
-    origin: ['http://localhost:5173', 'http://127.0.0.1:5173'], // Adjust based on your frontend URL
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+
+        // Allow exact matches for standard ports (80/443) where port is hidden
+        const allowedOrigins = [
+            'http://localhost',
+            'https://localhost',
+            'http://127.0.0.1',
+            'https://127.0.0.1'
+        ];
+
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+
+        // Allow any localhost origin on common dev ports (e.g. :5173, :3000, :8080)
+        if (origin.match(/^http:\/\/localhost:\d+$/) || origin.match(/^http:\/\/127\.0\.0\.1:\d+$/)) {
+            return callback(null, true);
+        }
+
+        const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+        return callback(new Error(msg), false);
+    },
     credentials: true
 }));
 app.use(express.json({ limit: '50mb' }));

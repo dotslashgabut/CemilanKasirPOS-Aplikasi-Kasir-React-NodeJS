@@ -39,6 +39,7 @@ php_server/vendor/
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+*.bat
 
 # macOS
 .DS_Store

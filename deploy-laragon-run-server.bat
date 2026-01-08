@@ -20,10 +20,10 @@ if not exist "dist\index.html" (
 
 echo.
 echo [2/4] Copying Frontend files to Laragon WWW root...
-xcopy /E /Y "dist\*" "C:\laragon\www\" >nul 2>&1
+xcopy /E /Y "dist\*" "F:\laragon\www\" >nul 2>&1
 if errorlevel 1 (
     echo ❌ Failed to copy frontend files!
-    echo Make sure C:\laragon\www\ is accessible
+    echo Make sure F:\laragon\www\ is accessible
     pause
     exit /b 1
 )
@@ -42,8 +42,8 @@ echo.
 :: echo.
 :: echo [4/4] Copying root .htaccess...
 echo [3/4] Copying root .htaccess...
-copy /Y ".htaccess" "C:\laragon\www\.htaccess" >nul 2>&1
-echo ✅ .htaccess copied to C:\laragon\www\.htaccess
+copy /Y ".htaccess" "F:\laragon\www\.htaccess" >nul 2>&1
+echo ✅ .htaccess copied to F:\laragon\www\.htaccess
 
 echo.
 echo ========================================
@@ -51,7 +51,7 @@ echo  ✅ Deployment Complete!
 echo ========================================
 echo.
 echo Folder Structure:
-echo   C:\laragon\www\
+echo   F:\laragon\www\
 echo   ├── index.html
 echo   ├── .htaccess
 echo   └── assets\
