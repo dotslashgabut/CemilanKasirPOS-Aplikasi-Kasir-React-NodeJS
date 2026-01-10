@@ -68,8 +68,7 @@ const App: React.FC = () => {
 
          setCurrentUser(user);
          localStorage.setItem('pos_current_user', JSON.stringify(user));
-         // Token is now handled by HttpOnly Cookie
-
+         // localStorage.setItem('pos_token', token); // Removed for HttpOnly Cookie Security
 
          setError('');
          // Reset form
@@ -82,10 +81,9 @@ const App: React.FC = () => {
    };
 
    const handleLogout = async () => {
+      // Use API Service to clear cookie
       await ApiService.logout();
       setCurrentUser(null);
-      localStorage.removeItem('pos_current_user');
-      // Token cookie is cleared by server
       setCurrentPage('dashboard');
    };
 

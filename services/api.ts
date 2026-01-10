@@ -2,18 +2,14 @@ import { Product, Transaction, User, CashFlow, Category, Customer, Supplier, Pur
 import { generateUUID, toMySQLDate } from "../utils";
 
 const isProd = import.meta.env.PROD;
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost/php_server/api';
 
-// Get headers with authentication
-// Get headers with authentication
+// Get headers (Auth now handled by HttpOnly Cookie)
 const getHeaders = () => {
-    // No longer need to manually adding token from localStorage
-    // HttpOnly cookie will be automatically sent with credentials: 'include'
-    const headers: Record<string, string> = {
-        'Content-Type': 'application/json'
+    return {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
     };
-
-    return headers;
 };
 
 // Global request helper to handle Auth & Caching
@@ -23,7 +19,7 @@ const request = async (endpoint: string, options: RequestInit = {}) => {
 
     const config = {
         ...options,
-        credentials: 'include', // Important for sending/receiving cookies
+        credentials: 'include' as RequestCredentials, // Send HttpOnly Cookie
         headers: {
             ...headers,
             ...options.headers,
@@ -320,7 +316,7 @@ export const ApiService = {
         const data = await res.json();
         return data.map(parseTransaction);
     },
-    addTransaction: async (transaction: Transaction) => {
+    addTransaction: async (transaction: Transaction): Promise<Transaction> => {
         // Convert ISO date to MySQL format
         const formattedDate = toMySQLDate(new Date(transaction.date));
 
@@ -348,6 +344,9 @@ export const ApiService = {
             body: JSON.stringify({ ...transaction, date: formattedDate })
         });
         if (!res.ok) throw new Error('Failed to add transaction');
+
+        const data = await res.json();
+        return parseTransaction(data);
     },
     updateTransaction: async (transaction: Transaction) => {
         // Convert ISO date to MySQL format
@@ -832,11 +831,15 @@ export const ApiService = {
 
 
     // Authentication
+    // Authentication
     login: async (username: string, password: string): Promise<{ user: User }> => {
         const res = await fetch(`${API_URL}/login`, {
             method: 'POST',
-            credentials: 'include', // Important!
-            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include', // Important for setting the cookie
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
             body: JSON.stringify({ username, password })
         });
 
@@ -854,14 +857,15 @@ export const ApiService = {
 
         return await res.json();
     },
+
     logout: async () => {
         try {
-            await fetch(`${API_URL}/logout`, {
-                method: 'POST',
-                credentials: 'include'
-            });
+            await request('/logout', { method: 'POST' });
         } catch (e) {
-            console.error("Logout failed", e);
+            console.error("Logout failed:", e);
         }
+        localStorage.removeItem('pos_current_user');
+        localStorage.removeItem('pos_token'); // Cleanup legacy
+        window.location.reload();
     }
 };
