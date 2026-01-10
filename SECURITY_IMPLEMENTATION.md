@@ -86,3 +86,29 @@ app.use(cors(corsOptions));
 
 ### 3. Token Expired
 *   Frontend harus menangani error token expired (biasanya 403) dengan me-logout user atau refresh token (jika diimplementasikan).
+
+## 🛡️ 4. Proteksi Data Integritas (Anti-Spoofing)
+
+### Vulnerability Sebelumnya
+Sebelumnya, identitas kasir (`cashierId`) dikirim oleh frontend melalui body request JSON. Hal ini memungkinkan pengguna yang nakal untuk memodifikasi LocalStorage (`pos_current_user`) atau memanipulasi request JSON untuk melakukan transaksi atas nama pengguna lain.
+
+### Solusi & Implementasi
+Perbaikan keamanan telah diterapkan di sisi server (`php_server/logic.php`) dengan prinsip **"Trust Token, Verify Nothing"** untuk identitas pengguna.
+
+1.  **Strict Identity Enforcement**:
+    Saat memproses transaksi atau pembelian, Backend **mengabaikan** data `cashierId`, `cashierName`, `userId`, atau `userName` yang dikirim dalam body request jika pengguna sudah terautentikasi.
+
+2.  **Identitas dari Token**:
+    Backend secara paksa menimpa field identitas dengan data yang diambil dari **JWT Token** yang valid.
+
+    ```php
+    // Logic di php_server/logic.php
+    if ($currentUser) {
+        // STRICTLY OVERWRITE: Do not trust frontend input
+        $data['cashierId'] = $currentUser['id'];
+        $data['cashierName'] = $currentUser['name'];
+    }
+    ```
+
+3.  **Implikasi**:
+    Meskipun seseorang berhasil mengedit tampilan nama pengguna di frontend (frontend spoofing), saat tombol "Proses" ditekan, data yang tercatat di database DIJAMIN tetap menggunakan identitas asli pemilik akun yang login (berdasarkan token/cookie yang valid).
