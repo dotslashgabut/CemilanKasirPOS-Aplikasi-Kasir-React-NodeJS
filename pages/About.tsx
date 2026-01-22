@@ -20,7 +20,7 @@ export const About: React.FC = () => {
                     <div className="mb-6">
                         <h2 className="text-3xl font-bold text-slate-800 mb-2">Cemilan KasirPOS</h2>
                         <div className="inline-block px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-sm font-medium mb-4">
-                            v0.1.0 React-Node.js
+                            v0.1.0 React-NodeJS
                         </div>
                         <p className="text-slate-500 text-lg max-w-2xl mx-auto">
                             Aplikasi kasir (Point of Sales) sederhana namun powerful untuk membantu pencatatan transaksi dan manajemen stok usaha Anda.
@@ -31,7 +31,7 @@ export const About: React.FC = () => {
 
                     <div className="flex flex-wrap justify-center gap-4">
                         <a
-                            href="https://github.com/dotslashgabut/cemilan-kasirpos"
+                            href="https://github.com/dotslashgabut/CemilanKasirPOS-Aplikasi-Kasir-React-NodeJS"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex flex-col items-center p-6 bg-slate-50 rounded-xl hover:bg-slate-100 transition-all border border-slate-200 group"

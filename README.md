@@ -1,8 +1,79 @@
-# Cemilan KasirPOS Nusantara
+<p align="center">
+  <img src="./public/favicon.svg" width="128" height="128" />
+</p>
+<h1 align="center">CemilanKasirPOS Nusantara</h1>
+<p align="center">CemilanKasirPOS adalah aplikasi kasir dengan fitur yang cukup lengkap dan mudah digunakan.</p>
 
-![Static Badge](https://img.shields.io/badge/build-passing-green?style=for-the-badge)
+<p align="center">
+    <img src="https://img.shields.io/badge/build-passing-green?style=for-the-badge" />
+</p>
 
-**Bug:** Unknown
+<table align="center">
+  <tr>
+    <td><a href="./screenshots/screenshot_01.jpg" target="_blank"><img src="./screenshots/screenshot_01.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_02.jpg" target="_blank"><img src="./screenshots/screenshot_02.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_03.jpg" target="_blank"><img src="./screenshots/screenshot_03.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_04.jpg" target="_blank"><img src="./screenshots/screenshot_04.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_05.jpg" target="_blank"><img src="./screenshots/screenshot_05.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_06.jpg" target="_blank"><img src="./screenshots/screenshot_06.jpg" width="200" /></a></td>
+  </tr>
+  <tr>
+    <td><a href="./screenshots/screenshot_07.jpg" target="_blank"><img src="./screenshots/screenshot_07.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_08.jpg" target="_blank"><img src="./screenshots/screenshot_08.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_09.jpg" target="_blank"><img src="./screenshots/screenshot_09.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_10.jpg" target="_blank"><img src="./screenshots/screenshot_10.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_11.jpg" target="_blank"><img src="./screenshots/screenshot_11.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_12.jpg" target="_blank"><img src="./screenshots/screenshot_12.jpg" width="200" /></a></td>
+  </tr>
+  <tr>
+    <td><a href="./screenshots/screenshot_13.jpg" target="_blank"><img src="./screenshots/screenshot_13.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_14.jpg" target="_blank"><img src="./screenshots/screenshot_14.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_15.jpg" target="_blank"><img src="./screenshots/screenshot_15.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_16.jpg" target="_blank"><img src="./screenshots/screenshot_16.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_17.jpg" target="_blank"><img src="./screenshots/screenshot_17.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_18.jpg" target="_blank"><img src="./screenshots/screenshot_18.jpg" width="200" /></a></td>
+  </tr>
+  <tr>
+    <td><a href="./screenshots/screenshot_19.jpg" target="_blank"><img src="./screenshots/screenshot_19.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_20.jpg" target="_blank"><img src="./screenshots/screenshot_20.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_21.jpg" target="_blank"><img src="./screenshots/screenshot_21.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_22.jpg" target="_blank"><img src="./screenshots/screenshot_22.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_23.jpg" target="_blank"><img src="./screenshots/screenshot_23.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_24.jpg" target="_blank"><img src="./screenshots/screenshot_24.jpg" width="200" /></a></td>
+  </tr>
+  <tr>
+    <td><a href="./screenshots/screenshot_25.jpg" target="_blank"><img src="./screenshots/screenshot_25.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_26.jpg" target="_blank"><img src="./screenshots/screenshot_26.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_27.jpg" target="_blank"><img src="./screenshots/screenshot_27.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_28.jpg" target="_blank"><img src="./screenshots/screenshot_28.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_29.jpg" target="_blank"><img src="./screenshots/screenshot_29.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_30.jpg" target="_blank"><img src="./screenshots/screenshot_30.jpg" width="200" /></a></td>
+  </tr>
+  <tr>
+    <td><a href="./screenshots/screenshot_31.jpg" target="_blank"><img src="./screenshots/screenshot_31.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_32.jpg" target="_blank"><img src="./screenshots/screenshot_32.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_33.jpg" target="_blank"><img src="./screenshots/screenshot_33.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_34.jpg" target="_blank"><img src="./screenshots/screenshot_34.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_35.jpg" target="_blank"><img src="./screenshots/screenshot_35.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_36.jpg" target="_blank"><img src="./screenshots/screenshot_36.jpg" width="200" /></a></td>
+  </tr>
+  <tr>
+    <td><a href="./screenshots/screenshot_37.jpg" target="_blank"><img src="./screenshots/screenshot_37.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_38.jpg" target="_blank"><img src="./screenshots/screenshot_38.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_39.jpg" target="_blank"><img src="./screenshots/screenshot_39.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_40.jpg" target="_blank"><img src="./screenshots/screenshot_40.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_41.jpg" target="_blank"><img src="./screenshots/screenshot_41.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_42.jpg" target="_blank"><img src="./screenshots/screenshot_42.jpg" width="200" /></a></td>
+  </tr>
+  <tr>
+    <td><a href="./screenshots/screenshot_43.jpg" target="_blank"><img src="./screenshots/screenshot_43.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_44.jpg" target="_blank"><img src="./screenshots/screenshot_44.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_45.jpg" target="_blank"><img src="./screenshots/screenshot_45.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_46.jpg" target="_blank"><img src="./screenshots/screenshot_46.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_47.jpg" target="_blank"><img src="./screenshots/screenshot_47.jpg" width="200" /></a></td>
+    <td><a href="./screenshots/screenshot_48.jpg" target="_blank"><img src="./screenshots/screenshot_48.jpg" width="200" /></a></td>
+  </tr>
+</table>
 
 **🍬 Cemilan KasirPOS Nusantara**
 
@@ -27,13 +98,15 @@ Fitur AI di aplikasi ini yang menggunakan Gemini API, kami belum sempat mencoban
 
 > via Saweria [**https://saweria.co/dotslashgabut**](https://saweria.co/dotslashgabut)
 
+> via Trakteer [**https://trakteer.id/dotslashgabut**](https://trakteer.id/dotslashgabut)
+
 > via Ko-fi [**https://ko-fi.com/dotslashgabut**](https://ko-fi.com/dotslashgabut)
 
 > _Semoga sistem POS (Point of Sale) - Aplikasi Kasir ini bermanfaat bagi semuanya, terutama warung kecil dan UMKM. Terima Kasih._
 
 ## 📃 Panduan singkat instalasi dan penggunaan aplikasi Cemilan KasirPOS
 
-Aplikasi ini dirilis dalam dua file arsip berbeda. Untuk file arsip dengan nama 'full', itu sudah termasuk node module yang diperlukan, siap pakai. Sedangkan untuk file arsip tanpa nama 'full', belum termasuk node modul, file-filenya sama seperti yang ada di repository, diperlukan penginstalan modul-modulnya.
+Aplikasi ini menggunakan **React** untuk frontend dan **Node.js** untuk backend.
 
 Panduan instalasi dan penggunaan untuk Development, selengkapnya bisa dibaca di **[README_DEVELOPMENT.md](./README_DEVELOPMENT.md)**, dan untuk Production bisa dibaca di **[README_PRODUCTION.md](./README_PRODUCTION.md)**
 

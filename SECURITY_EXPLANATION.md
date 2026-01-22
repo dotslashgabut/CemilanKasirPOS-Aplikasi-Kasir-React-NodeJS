@@ -1,4 +1,4 @@
-# Penjelasan Detail Implementasi Keamanan (Node.js)
+# Penjelasan Detail Implementasi Keamanan (Node.js) - 2026 Update
 
 Dokumen ini memberikan penjelasan mendalam mengenai beberapa mekanisme keamanan utama yang diterapkan pada backend Node.js Cemilan KasirPOS.
 

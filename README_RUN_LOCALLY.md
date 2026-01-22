@@ -15,8 +15,8 @@ Pastikan komputer Anda sudah terinstall:
 ## 🚀 Langkah 1: Persiapan Database
 
 1.  Buka aplikasi manajemen database Anda (phpMyAdmin, HeidiSQL, DBeaver, dll).
-2.  Buat database baru dengan nama: `cemilankasirpos_php`.
-3.  (Opsional) Import file SQL `cemilankasirpos_php.sql` jika Anda ingin struktur awal, namun backend Node.js (Sequelize) akan otomatis membuat tabel jika belum ada.
+2.  Buat database baru dengan nama: `cemilankasirpos_php_v02`.
+3.  Import file SQL `cemilankasirpos_php_v02.sql`.
 
 ---
 
@@ -42,7 +42,7 @@ npm install
 Buat file bernama `.env` di dalam folder `server` dan isi dengan konfigurasi berikut:
 
 ```env
-DB_NAME=cemilankasirpos_php
+DB_NAME=cemilankasirpos_php_v02
 DB_USER=root
 DB_PASS=
 DB_HOST=localhost

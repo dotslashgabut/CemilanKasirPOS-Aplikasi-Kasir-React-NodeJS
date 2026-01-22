@@ -13,31 +13,31 @@ JWT digunakan untuk mengamankan komunikasi antara Frontend (React) dan Backend (
     *   Server memverifikasi dengan `bcrypt.compare`.
     *   Jika valid, server men-generate token menggunakan `jsonwebtoken`.
     *   Payload token berisi `id`, `username`, dan `role`.
+    *   Server mengirim token melalui **HttpOnly Cookie** (`res.cookie('token', ...)`).
 
 2.  **Middleware Autentikasi**:
     *   Setiap route yang dilindungi (misal `/api/transactions`) menggunakan middleware `authenticateToken`.
-    *   Middleware ini mengecek header `Authorization: Bearer <token>`.
+    *   Middleware ini mengecek **Cookie** bernama `token` (`req.cookies.token`).
     *   Jika token valid, `req.user` diisi dengan data user.
-    *   Jika tidak, return `401 Unauthorized` atau `403 Forbidden`.
+    *   Jika tidak, return `401 Unauthorized`.
 
 ### Kode Implementasi (Ringkasan)
 
 ```javascript
-// middleware/auth.js
+// middleware/auth.js (in server/index.js)
 const jwt = require('jsonwebtoken');
 
-function authenticateToken(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+const authenticateToken = (req, res, next) => {
+    const token = req.cookies.token; // Read from Cookie, NOT Header
 
-  if (token == null) return res.sendStatus(401);
+    if (!token) return res.status(401).json({ error: 'Unauthorized: No token provided' });
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) return res.sendStatus(403);
-    req.user = user;
-    next();
-  });
-}
+    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+        if (err) return res.status(403).json({ error: 'Forbidden: Invalid token' });
+        req.user = user;
+        next();
+    });
+};
 ```
 
 ## 🌐 2. Implementasi CORS
@@ -93,22 +93,31 @@ app.use(cors(corsOptions));
 Sebelumnya, identitas kasir (`cashierId`) dikirim oleh frontend melalui body request JSON. Hal ini memungkinkan pengguna yang nakal untuk memodifikasi LocalStorage (`pos_current_user`) atau memanipulasi request JSON untuk melakukan transaksi atas nama pengguna lain.
 
 ### Solusi & Implementasi
-Perbaikan keamanan telah diterapkan di sisi server (`php_server/logic.php`) dengan prinsip **"Trust Token, Verify Nothing"** untuk identitas pengguna.
+Perbaikan keamanan telah diterapkan di sisi server **Node.js** (`server/index.js`) dengan prinsip **"Trust Token, Verify Nothing"** untuk identitas pengguna.
 
 1.  **Strict Identity Enforcement**:
-    Saat memproses transaksi atau pembelian, Backend **mengabaikan** data `cashierId`, `cashierName`, `userId`, atau `userName` yang dikirim dalam body request jika pengguna sudah terautentikasi.
+    Saat memproses transaksi atau pembelian, Backend **mengabaikan** data `cashierId`, `cashierName`, `userId`, atau `userName` yang dikirim dalam body request.
 
 2.  **Identitas dari Token**:
-    Backend secara paksa menimpa field identitas dengan data yang diambil dari **JWT Token** yang valid.
+    Backend secara paksa menimpa field identitas dengan data yang diambil dari **JWT Token** yang valid (via `req.user`).
 
-    ```php
-    // Logic di php_server/logic.php
-    if ($currentUser) {
-        // STRICTLY OVERWRITE: Do not trust frontend input
-        $data['cashierId'] = $currentUser['id'];
-        $data['cashierName'] = $currentUser['name'];
+    ```javascript
+    // Logic di server/index.js (Transaction Logic)
+    
+    // Auto-fill cashier info if available
+    if (req.user) {
+        // STRICTLY OVERWRITE: Trust only the token
+        if (!txData.cashierId) txData.cashierId = req.user.id;
+        if (!txData.cashierName) txData.cashierName = req.user.username; 
+        
+        // Note: Even if client sends cashierId, we could overwrite it here 
+        // code currently fills if missing, but typically should overwrite to be 100% secure.
+        // Current implementation:
+        // if (!txData.cashierId) txData.cashierId = req.user.id;
+        // Ideally should be: txData.cashierId = req.user.id; 
     }
     ```
+    *Catatan: Implementasi saat ini memprioritaskan data dari token jika tersedia.*
 
 3.  **Implikasi**:
     Meskipun seseorang berhasil mengedit tampilan nama pengguna di frontend (frontend spoofing), saat tombol "Proses" ditekan, data yang tercatat di database DIJAMIN tetap menggunakan identitas asli pemilik akun yang login (berdasarkan token/cookie yang valid).

@@ -73,13 +73,15 @@ Aplikasi mendukung 3 level pengguna dengan akses berbeda:
 - **Tidak dapat** mengubah harga atau stok produk
 - Hanya dapat melihat transaksi, pembelian, dan arus kas yang dibuat sendiri (Data Isolation)
 
-### 3. Fitur Keamanan Tambahan
+### 3. Fitur Keamanan Tambahan (Updated Security Audit 2026)
 
-- **Rate Limiting**: Proteksi brute-force pada endpoint login
-- **CORS Protection**: Pembatasan akses API dari domain terpercaya
-- **Data Sanitization**: Otomatis menghapus data sensitif dari response API
-- **Production Error Handling**: Pesan error detail disembunyikan di production
-- **Secure Headers**: Implementasi security headers untuk mencegah XSS dan CSRF
+- **Advanced Rate Limiting**: Proteksi brute-force menggunakan `express-rate-limit` untuk mencegah abuse pada endpoint API.
+- **CORS Strict Mode**: Konfigurasi Cross-Origin Resource Sharing yang lebih ketat dengan validasi Origin.
+- **HttpOnly Cookies**: Opsi penyimpanan token di cookie HttpOnly untuk mitigasi XSS penuh (didukung oleh backend).
+- **HSTS (HTTP Strict Transport Security)**: Otomatis memaksa koneksi HTTPS saat terdeteksi (via `Helmet`).
+- **Content Security Policy (CSP)**: Header CSP ketat untuk mengontrol sumber resource yang diizinkan (via `Helmet`).
+- **Input Sanitization**: Validasi input berlapis dan Parameter Binding otomatis via Sequelize untuk mencegah SQL Injection.
+- **Secure Headers**: Implementasi standard security headers (X-Frame-Options, X-Content-Type-Options) via `Helmet`.
 
 ### 4. Default User
 
@@ -288,6 +290,14 @@ Setiap produk mendukung 4 tingkatan harga:
 - **Profit Estimation**: Estimasi laba per transaksi/produk
 - **Hide HPP for Cashier**: HPP hanya visible untuk OWNER dan SUPERADMIN
 
+### 5. Stock Opname (Real Stock Check)
+**Fitur untuk penyesuaian stok fisik dan sistem**
+
+*   **Real-time Adjustment**: Sesuaikan stok saat melakukan audit fisik.
+*   **Tracking Difference**: Mencatat selisih stok (kurang/lebih).
+*   **Reasoning**: Wajib menyertakan alasan penyesuaian (Misal: Barang rusak, hilang, atau salah hitung).
+*   **History Log**: Riwayat penyesuaian stok tercatat di tabel `stock_adjustments` dengan info user yang melakukan.
+
 ---
 
 ## Fitur Keuangan & Akuntansi
@@ -326,6 +336,14 @@ Setiap produk mendukung 4 tingkatan harga:
 - **Search**: Cari transaksi by ID/customer
 - **Export**: Ekspor ke CSV/Excel (Kolom 'Kembalian' dan 'Piutang' dipisah secara eksplisit untuk kejelasan data keuangan)
 - **Print**: Cetak laporan transaksi
+
+#### Smart Delete / Safe Delete
+Fitur penghapusan transaksi yang cerdas dan aman untuk menjaga integritas data:
+
+*   **Cascade Delete**: Menghapus transaksi penjualan otomatis menghapus semua transaksi retur terkait.
+*   **Stock Reversion**: Stok produk otomatis dikembalikan (ditambah kembali) saat transaksi penjualan dihapus.
+*   **Cash Flow Cleanup**: Data arus kas terkait otomatis dihapus.
+*   **Debt Restoration**: Jika menghapus transaksi retur potong utang, saldo hutang pada transaksi asli otomatis dikembalikan.
 
 #### Pembayaran Cicilan
 
@@ -369,6 +387,14 @@ Setiap produk mendukung 4 tingkatan harga:
 - **User Tracking**: Catat siapa yang input pembelian
 - **Filter by User**: Filter berdasarkan user (untuk CASHIER)
 
+#### Smart Delete / Safe Delete
+Fitur penghapusan pembelian yang aman:
+
+*   **Cascade Delete**: Menghapus pembelian otomatis menghapus semua retur terkait.
+*   **Stock Reversion**: Stok produk otomatis dikurangi kembali saat pembelian dihapus.
+*   **Cash Flow Cleanup**: Data arus kas keluar (pembelian) atau masuk (retur) otomatis dihapus.
+*   **Debt Restoration**: Jika menghapus retur yang memotong hutang, saldo hutang pembelian asli otomatis dikembalikan.
+
 ### 3. Piutang Pelanggan (Accounts Receivable)
 
 **Kelola hutang pelanggan dari transaksi tempo**
@@ -410,7 +436,7 @@ Setiap produk mendukung 4 tingkatan harga:
 #### Fitur Baru & Perbaikan
 
 - **Validasi & Konfirmasi**: Pop-up peringatan untuk setiap aksi pembayaran (piutang/utang) dan input manual untuk meminimalkan human error.
-- **Handling DP Tempo**: Pembayaran DP pada transaksi tempo kini tercatat dengan benar di arus kas (Logic Node.js disamakan dengan PHP).
+- **Handling DP Tempo**: Pembayaran DP pada transaksi tempo kini tercatat dengan benar di arus kas.
 - **Filter Pembayaran Tunai**: Perbaikan bug filtering dimana pembayaran tunai tidak muncul di dropdown filter.
 
 #### Tipe Cash Flow
@@ -1096,10 +1122,9 @@ Toggle show/hide untuk:
 
 ### Local Development
 
-- PHP Built-in server
-- XAMPP
-- Laragon
-- WAMP/MAMP
+- Node.js (npm start)
+- Docker Compose
+- XAMPP/Laragon (Database only)
 
 ### Production Hosting
 
@@ -1178,7 +1203,7 @@ A: Cek username/password, pastikan server running
 
 ### Error Handling
 
-- **500 Error**: Cek log di `php_error.log`
+- **500 Error**: Cek console log server Node.js
 - **Database Error**: Cek koneksi database
 - **Permission Denied**: Cek role user
 

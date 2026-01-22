@@ -678,6 +678,78 @@ app.delete('/api/purchases/:id', authenticateToken, async (req, res) => {
     }
 });
 
+app.get('/api/auth/me', authenticateToken, async (req, res) => {
+    try {
+        const User = models.User;
+        const user = await User.findByPk(req.user.id, {
+            attributes: { exclude: ['password'] }
+        });
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        res.json(user);
+    } catch (error) {
+        res.status(500).json({ error: getSafeError(error) });
+    }
+});
+
+// Stock Adjustment Logic
+app.post('/api/stock_adjustments', authenticateToken, async (req, res) => {
+    const t = await sequelize.transaction();
+    try {
+        const adjustmentData = req.body;
+        const StockAdjustment = models.StockAdjustment;
+        const Product = models.Product;
+
+        const product = await Product.findByPk(adjustmentData.productId, { transaction: t });
+        if (!product) {
+            await t.rollback();
+            return res.status(404).json({ error: 'Product not found' });
+        }
+
+        // Calculate stocks
+        const previousStock = product.stock;
+        let currentStock = previousStock;
+        const qty = parseInt(adjustmentData.qty);
+
+        if (adjustmentData.type === 'INCREASE') {
+            currentStock += qty;
+        } else if (adjustmentData.type === 'DECREASE') {
+            currentStock -= qty;
+        }
+
+        // Create adjustment record
+        // ID generation should be handled by client or fallback
+        if (!adjustmentData.id) adjustmentData.id = Date.now().toString();
+
+        const adjustment = await StockAdjustment.create({
+            ...adjustmentData,
+            previousStock,
+            currentStock,
+            productName: product.name, // Snapshot name
+            userId: req.user.id,
+            userName: req.user.username
+        }, { transaction: t });
+
+        // Update Product Stock
+        await product.update({ stock: currentStock }, { transaction: t });
+
+        await t.commit();
+        res.json(adjustment);
+    } catch (error) {
+        await t.rollback();
+        console.error('Stock Adjustment Error:', error);
+        res.status(500).json({ error: getSafeError(error) });
+    }
+});
+
+app.delete('/api/stock_adjustments/reset', authenticateToken, async (req, res) => {
+    try {
+        await models.StockAdjustment.destroy({ where: {}, truncate: false }); // truncate: true might fail with foreign keys depending on dialect setup
+        res.status(204).send();
+    } catch (error) {
+        res.status(500).json({ error: getSafeError(error) });
+    }
+});
+
 const routeMap = {
     Product: 'products',
     Category: 'categories',
@@ -688,7 +760,8 @@ const routeMap = {
     CashFlow: 'cashflow',
     User: 'users',
     BankAccount: 'banks',
-    StoreSettings: 'store_settings'
+    StoreSettings: 'store_settings',
+    StockAdjustment: 'stock_adjustments'
 };
 
 Object.keys(models).forEach(modelName => {

@@ -29,7 +29,7 @@ Pastikan file `.env` ada di dalam folder `server`. Jika belum ada, buat file `.e
 
 ```env
 # Konfigurasi Database
-DB_NAME=cemilankasirpos
+DB_NAME=cemilankasirpos_php_v02
 DB_USER=root
 DB_PASS=
 DB_HOST=localhost

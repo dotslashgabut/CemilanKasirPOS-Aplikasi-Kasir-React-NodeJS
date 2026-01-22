@@ -129,6 +129,21 @@ const StoreSettings = sequelize.define('StoreSettings', {
     printerType: { type: DataTypes.STRING }
 });
 
+const StockAdjustment = sequelize.define('StockAdjustment', {
+    id: { type: DataTypes.STRING, primaryKey: true },
+    date: { type: DataTypes.DATE },
+    productId: { type: DataTypes.STRING, allowNull: false },
+    productName: { type: DataTypes.STRING },
+    type: { type: DataTypes.STRING, allowNull: false }, // INCREASE, DECREASE
+    reason: { type: DataTypes.STRING, allowNull: false },
+    qty: { type: DataTypes.INTEGER, allowNull: false },
+    previousStock: { type: DataTypes.INTEGER, defaultValue: 0 },
+    currentStock: { type: DataTypes.INTEGER, defaultValue: 0 },
+    note: { type: DataTypes.TEXT },
+    userId: { type: DataTypes.STRING },
+    userName: { type: DataTypes.STRING }
+});
+
 export {
     sequelize,
     Product,
@@ -140,5 +155,6 @@ export {
     CashFlow,
     User,
     BankAccount,
-    StoreSettings
+    StoreSettings,
+    StockAdjustment
 };

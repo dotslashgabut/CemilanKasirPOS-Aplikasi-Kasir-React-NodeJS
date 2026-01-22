@@ -37,14 +37,14 @@ Backend terletak di folder `server`.
     ```
 
 3.  **Setup Database**:
-    *   Buat database baru di MySQL bernama `cemilankasirpos`.
-    *   (Opsional) Import file `cemilankasirpos_php.sql` jika ingin data awal, tapi Sequelize akan membuat tabel otomatis.
+    *   Buat database baru di MySQL bernama `cemilankasirpos_php_v02`.
+    *   (Opsional) Import file `cemilankasirpos_php_v02.sql` jika ingin data awal, tapi Sequelize akan membuat tabel otomatis.
 
 4.  **Konfigurasi Environment**:
     *   Buat file `.env` di dalam folder `server`.
     *   Isi dengan konfigurasi berikut:
         ```env
-        DB_NAME=cemilankasirpos
+        DB_NAME=cemilankasirpos_php_v02
         DB_USER=root
         DB_PASS=
         DB_HOST=localhost

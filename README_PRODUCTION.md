@@ -48,7 +48,7 @@ Sebelum menjalankan perintah build, pastikan konfigurasi aplikasi sudah benar.
         DB_HOST=localhost
         DB_USER=prod_user
         DB_PASS=prod_password
-        DB_NAME=cemilankasirpos_prod
+        DB_NAME=cemilankasirpos_php_v02
         JWT_SECRET=VERY_SECURE_RANDOM_STRING
         PORT=3001
         ```
