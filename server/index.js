@@ -2,10 +2,12 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import { sequelize } from './models/index.js';
+import { Op } from 'sequelize';
 import * as models from './models/index.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import dotenv from 'dotenv';
+import { randomUUID } from 'crypto';
 
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -17,6 +19,46 @@ const getSafeError = (error) => {
         return 'An unexpected error occurred. Please contact support.';
     }
     return error.message || String(error);
+};
+
+// Helper: Generate Invoice Number (Format: INVYY-XXXXXXXXXX or POYY-XXXXXXXXXX)
+// Matches PHP Logic: PREFIX + YY + - + 10 digits sequential
+const generateInvoiceNumber = async (model, type) => {
+    const prefix = type === 'SALE' ? 'INV' : 'PO';
+    const year = new Date().getFullYear().toString().slice(-2); // e.g. '25'
+    const prefixYear = `${prefix}${year}-`;
+
+    try {
+        const lastRecord = await model.findOne({
+            where: {
+                invoiceNumber: {
+                    [Op.like]: `${prefixYear}%`
+                }
+            },
+            order: [
+                [sequelize.fn('LENGTH', sequelize.col('invoiceNumber')), 'DESC'],
+                ['invoiceNumber', 'DESC']
+            ]
+        });
+
+        let newSeq = 1;
+        if (lastRecord && lastRecord.invoiceNumber) {
+            const parts = lastRecord.invoiceNumber.split('-');
+            // parts[0] is INV25, parts[1] is the sequence
+            if (parts[1]) {
+                const lastSeq = parseInt(parts[1], 10);
+                if (!isNaN(lastSeq)) {
+                    newSeq = lastSeq + 1;
+                }
+            }
+        }
+
+        return `${prefixYear}${newSeq.toString().padStart(10, '0')}`;
+    } catch (error) {
+        console.error("Error generating invoice number:", error);
+        // Fallback
+        return `${prefixYear}${Date.now().toString().slice(-10)}`;
+    }
 };
 
 const app = express();
@@ -173,8 +215,8 @@ const createCrudRoutes = (modelName) => {
                 options.attributes = { exclude: ['password'] };
             }
 
-            // Filter for Cashier: Only show their own financial data
-            if (req.user.role === 'CASHIER') {
+            // Filter for Cashier/Warehouse: Only show their own financial data
+            if (req.user.role === 'CASHIER' || req.user.role === 'GUDANG') {
                 if (modelName === 'Transaction') {
                     options.where = { cashierId: req.user.id };
                 } else if (modelName === 'Purchase' || modelName === 'CashFlow') {
@@ -204,8 +246,8 @@ const createCrudRoutes = (modelName) => {
                 options.attributes = { exclude: ['password'] };
             }
 
-            // Filter for Cashier
-            if (req.user.role === 'CASHIER') {
+            // Filter for Cashier/Warehouse
+            if (req.user.role === 'CASHIER' || req.user.role === 'GUDANG') {
                 options.where = options.where || {};
                 if (modelName === 'Transaction') {
                     options.where.cashierId = req.user.id;
@@ -245,11 +287,11 @@ const createCrudRoutes = (modelName) => {
                 return res.status(403).json({ error: 'Access denied' });
             }
 
-            // RBAC: Cashiers cannot create master data
-            if (req.user.role === 'CASHIER') {
+            // RBAC: Cashiers and Warehouse cannot create master data
+            if (req.user.role === 'CASHIER' || req.user.role === 'GUDANG') {
                 const restrictedModels = ['Product', 'Category', 'Customer', 'Supplier', 'User', 'StoreSettings'];
                 if (restrictedModels.includes(modelName)) {
-                    return res.status(403).json({ error: 'Access denied. Cashiers can only process transactions.' });
+                    return res.status(403).json({ error: 'Access denied. You can only process transactions.' });
                 }
             }
 
@@ -278,11 +320,11 @@ const createCrudRoutes = (modelName) => {
                 return res.status(403).json({ error: 'Access denied' });
             }
 
-            // RBAC: Cashiers cannot modify master data
-            if (req.user.role === 'CASHIER') {
+            // RBAC: Cashiers and Warehouse cannot modify master data
+            if (req.user.role === 'CASHIER' || req.user.role === 'GUDANG') {
                 const restrictedModels = ['Product', 'Category', 'Customer', 'Supplier', 'User', 'StoreSettings'];
                 if (restrictedModels.includes(modelName)) {
-                    return res.status(403).json({ error: 'Access denied. Cashiers can only process transactions.' });
+                    return res.status(403).json({ error: 'Access denied. You can only process transactions.' });
                 }
             }
 
@@ -336,11 +378,11 @@ const createCrudRoutes = (modelName) => {
                 }
             }
 
-            // RBAC: Cashiers cannot delete master data
-            if (req.user.role === 'CASHIER') {
+            // RBAC: Cashiers and Warehouse cannot delete master data
+            if (req.user.role === 'CASHIER' || req.user.role === 'GUDANG') {
                 const restrictedModels = ['Product', 'Category', 'Customer', 'Supplier', 'User', 'StoreSettings', 'BankAccount'];
                 if (restrictedModels.includes(modelName)) {
-                    return res.status(403).json({ error: 'Access denied. Cashiers cannot delete data.' });
+                    return res.status(403).json({ error: 'Access denied. You cannot delete data.' });
                 }
             }
 
@@ -360,11 +402,11 @@ const createCrudRoutes = (modelName) => {
     // Batch insert/upsert for migration/sync
     router.post('/batch', authenticateToken, async (req, res) => {
         try {
-            // RBAC: Cashiers cannot perform batch operations on restricted resources
-            if (req.user.role === 'CASHIER') {
+            // RBAC: Cashiers/Warehouse cannot perform batch operations on restricted resources
+            if (req.user.role === 'CASHIER' || req.user.role === 'GUDANG') {
                 const restrictedModels = ['Product', 'Category', 'Customer', 'Supplier', 'User', 'StoreSettings'];
                 if (restrictedModels.includes(modelName)) {
-                    return res.status(403).json({ error: 'Access denied. Cashiers cannot perform batch operations on this resource.' });
+                    return res.status(403).json({ error: 'Access denied. You cannot perform batch operations on this resource.' });
                 }
             }
 
@@ -394,7 +436,7 @@ app.post('/api/transactions', authenticateToken, async (req, res) => {
     try {
         const txData = req.body;
         // Ensure ID
-        if (!txData.id) txData.id = models.sequelize.fn('uuid'); // or generate on client
+        if (!txData.id) txData.id = randomUUID(); // or generate on client
 
         const Transaction = models.Transaction;
         const Product = models.Product;
@@ -406,6 +448,11 @@ app.post('/api/transactions', authenticateToken, async (req, res) => {
         if (req.user) {
             if (!txData.cashierId) txData.cashierId = req.user.id;
             if (!txData.cashierName) txData.cashierName = req.user.username; // Or req.user.name if available
+        }
+
+        // Generate Invoice Number if missing
+        if (!txData.invoiceNumber) {
+            txData.invoiceNumber = await generateInvoiceNumber(Transaction, 'SALE');
         }
 
         const transaction = await Transaction.create(txData, { transaction: t });
@@ -463,8 +510,8 @@ app.post('/api/transactions', authenticateToken, async (req, res) => {
                 }
 
                 const description = isReturn
-                    ? `Refund Retur Transaksi #${txData.id.substring(0, 6)}${bankInfo}`
-                    : `Penjualan ke ${txData.customerName || 'Umum'} (Tx: ${txData.id.substring(0, 6)})${bankInfo}`;
+                    ? `Refund Retur Transaksi (Invoice: ${txData.invoiceNumber || txData.id.substring(0, 6)})${bankInfo}`
+                    : `Penjualan ke ${txData.customerName || 'Umum'} (Invoice: ${txData.invoiceNumber || txData.id.substring(0, 6)})${bankInfo}`;
 
                 // Determine payment method for CashFlow: TRANSFER if bankId exists, otherwise CASH
                 const cfPaymentMethod = txData.bankId ? 'TRANSFER' : 'CASH';
@@ -512,6 +559,11 @@ app.post('/api/purchases', authenticateToken, async (req, res) => {
             purchaseData.userName = req.user.username; // Or req.user.name
         }
 
+        // Generate Invoice Number if missing
+        if (!purchaseData.invoiceNumber) {
+            purchaseData.invoiceNumber = await generateInvoiceNumber(Purchase, 'PURCHASE');
+        }
+
         const purchase = await Purchase.create(purchaseData, { transaction: t });
 
         // 2. Update Stock
@@ -548,8 +600,8 @@ app.post('/api/purchases', authenticateToken, async (req, res) => {
                 }
 
                 const description = isReturn
-                    ? `Refund Retur Pembelian dari ${purchaseData.supplierName}${bankInfo}`
-                    : `Pembelian dari ${purchaseData.supplierName}: ${purchaseData.description}${bankInfo}`;
+                    ? `Refund Retur Pembelian dari ${purchaseData.supplierName} (Invoice: ${purchaseData.invoiceNumber || '- '})${bankInfo}`
+                    : `Pembelian dari ${purchaseData.supplierName} (Invoice: ${purchaseData.invoiceNumber || '-'}): ${purchaseData.description}${bankInfo}`;
 
                 // Determine payment method for CashFlow: TRANSFER if bankId exists, otherwise CASH
                 const cfPaymentMethod = purchaseData.bankId ? 'TRANSFER' : 'CASH';
@@ -585,6 +637,12 @@ app.delete('/api/transactions/:id', authenticateToken, async (req, res) => {
     const t = await sequelize.transaction();
     try {
         const { id } = req.params;
+
+        // RBAC Check: Only SUPERADMIN or OWNER can delete transactions
+        if (req.user.role !== 'SUPERADMIN' && req.user.role !== 'OWNER') {
+            return res.status(403).json({ error: 'Access denied. Only Owner/Admin can delete financial data.' });
+        }
+
         const Transaction = models.Transaction;
         const CashFlow = models.CashFlow;
 
@@ -608,6 +666,17 @@ app.delete('/api/transactions/:id', authenticateToken, async (req, res) => {
         });
 
         for (const ret of returns) {
+            // Revert Stock for Return Transaction
+            // Return Transaction = Stock Increased, so Revert = Stock Decrease
+            if (ret.items && Array.isArray(ret.items)) {
+                for (const item of ret.items) {
+                    const product = await models.Product.findByPk(item.id, { transaction: t });
+                    if (product) {
+                        await product.decrement('stock', { by: item.qty, transaction: t });
+                    }
+                }
+            }
+
             // Delete CashFlow for return (e.g. refund)
             await CashFlow.destroy({
                 where: { referenceId: ret.id },
@@ -617,7 +686,23 @@ app.delete('/api/transactions/:id', authenticateToken, async (req, res) => {
             await ret.destroy({ transaction: t });
         }
 
-        // 4. Delete the transaction itself
+        // 4. Revert Stock for Main Transaction
+        // Sale = Stock Decreased, so Revert = Stock Increase
+        // Return = Stock Increased, so Revert = Stock Decrease
+        if (transaction.items && Array.isArray(transaction.items)) {
+            for (const item of transaction.items) {
+                const product = await models.Product.findByPk(item.id, { transaction: t });
+                if (product) {
+                    if (transaction.type === 'RETURN') {
+                        await product.decrement('stock', { by: item.qty, transaction: t });
+                    } else {
+                        await product.increment('stock', { by: item.qty, transaction: t });
+                    }
+                }
+            }
+        }
+
+        // 5. Delete the transaction itself
         await transaction.destroy({ transaction: t });
 
         await t.commit();
@@ -634,6 +719,12 @@ app.delete('/api/purchases/:id', authenticateToken, async (req, res) => {
     const t = await sequelize.transaction();
     try {
         const { id } = req.params;
+
+        // RBAC Check: Only SUPERADMIN or OWNER can delete purchases
+        if (req.user.role !== 'SUPERADMIN' && req.user.role !== 'OWNER') {
+            return res.status(403).json({ error: 'Access denied. Only Owner/Admin can delete financial data.' });
+        }
+
         const Purchase = models.Purchase;
         const CashFlow = models.CashFlow;
 
@@ -657,6 +748,17 @@ app.delete('/api/purchases/:id', authenticateToken, async (req, res) => {
         });
 
         for (const ret of returns) {
+            // Revert Stock for Return Purchase
+            // Return Purchase = Stock Decreased, so Revert = Stock Increase
+            if (ret.items && Array.isArray(ret.items)) {
+                for (const item of ret.items) {
+                    const product = await models.Product.findByPk(item.id, { transaction: t });
+                    if (product) {
+                        await product.increment('stock', { by: item.qty, transaction: t });
+                    }
+                }
+            }
+
             // Delete CashFlow for return
             await CashFlow.destroy({
                 where: { referenceId: ret.id },
@@ -666,7 +768,23 @@ app.delete('/api/purchases/:id', authenticateToken, async (req, res) => {
             await ret.destroy({ transaction: t });
         }
 
-        // 4. Delete the purchase itself
+        // 4. Revert Stock for Main Purchase
+        // Purchase = Stock Increased, so Revert = Stock Decrease
+        // Return = Stock Decreased, so Revert = Stock Increase
+        if (purchase.items && Array.isArray(purchase.items)) {
+            for (const item of purchase.items) {
+                const product = await models.Product.findByPk(item.id, { transaction: t });
+                if (product) {
+                    if (purchase.type === 'RETURN') {
+                        await product.increment('stock', { by: item.qty, transaction: t });
+                    } else {
+                        await product.decrement('stock', { by: item.qty, transaction: t });
+                    }
+                }
+            }
+        }
+
+        // 5. Delete the purchase itself
         await purchase.destroy({ transaction: t });
 
         await t.commit();

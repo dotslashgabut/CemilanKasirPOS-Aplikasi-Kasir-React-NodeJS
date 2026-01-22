@@ -14,12 +14,12 @@ const Product = sequelize.define('Product', {
     priceWholesale: { type: DataTypes.FLOAT, defaultValue: 0 },
     pricePromo: { type: DataTypes.FLOAT },
     image: { type: DataTypes.TEXT('long') }
-});
+}, { tableName: 'products' });
 
 const Category = sequelize.define('Category', {
     id: { type: DataTypes.STRING, primaryKey: true },
     name: { type: DataTypes.STRING, allowNull: false }
-});
+}, { tableName: 'categories' });
 
 const Customer = sequelize.define('Customer', {
     id: { type: DataTypes.STRING, primaryKey: true },
@@ -28,7 +28,7 @@ const Customer = sequelize.define('Customer', {
     address: { type: DataTypes.STRING },
     image: { type: DataTypes.TEXT('long') },
     defaultPriceType: { type: DataTypes.STRING }
-});
+}, { tableName: 'customers' });
 
 const Supplier = sequelize.define('Supplier', {
     id: { type: DataTypes.STRING, primaryKey: true },
@@ -36,7 +36,7 @@ const Supplier = sequelize.define('Supplier', {
     phone: { type: DataTypes.STRING },
     address: { type: DataTypes.STRING },
     image: { type: DataTypes.TEXT('long') }
-});
+}, { tableName: 'suppliers' });
 
 const Transaction = sequelize.define('Transaction', {
     id: { type: DataTypes.STRING, primaryKey: true },
@@ -58,8 +58,9 @@ const Transaction = sequelize.define('Transaction', {
     cashierName: { type: DataTypes.STRING },
     paymentHistory: { type: DataTypes.JSON },
     isReturned: { type: DataTypes.BOOLEAN, defaultValue: false },
-    returnNote: { type: DataTypes.TEXT }
-});
+    returnNote: { type: DataTypes.TEXT },
+    invoiceNumber: { type: DataTypes.STRING }
+}, { tableName: 'transactions' });
 
 const Purchase = sequelize.define('Purchase', {
     id: { type: DataTypes.STRING, primaryKey: true },
@@ -79,9 +80,10 @@ const Purchase = sequelize.define('Purchase', {
     paymentHistory: { type: DataTypes.JSON },
     isReturned: { type: DataTypes.BOOLEAN, defaultValue: false },
     returnNote: { type: DataTypes.TEXT },
+    invoiceNumber: { type: DataTypes.STRING },
     userId: { type: DataTypes.STRING },
     userName: { type: DataTypes.STRING }
-});
+}, { tableName: 'purchases' });
 
 const CashFlow = sequelize.define('CashFlow', {
     id: { type: DataTypes.STRING, primaryKey: true },
@@ -96,7 +98,7 @@ const CashFlow = sequelize.define('CashFlow', {
     referenceId: { type: DataTypes.STRING }, // To link with Transaction or Purchase ID
     userId: { type: DataTypes.STRING },
     userName: { type: DataTypes.STRING }
-});
+}, { tableName: 'cashflows' });
 
 const User = sequelize.define('User', {
     id: { type: DataTypes.STRING, primaryKey: true },
@@ -105,14 +107,14 @@ const User = sequelize.define('User', {
     password: { type: DataTypes.STRING },
     role: { type: DataTypes.STRING },
     image: { type: DataTypes.TEXT('long') }
-});
+}, { tableName: 'users' });
 
 const BankAccount = sequelize.define('BankAccount', {
     id: { type: DataTypes.STRING, primaryKey: true },
     bankName: { type: DataTypes.STRING },
     accountNumber: { type: DataTypes.STRING },
     holderName: { type: DataTypes.STRING }
-});
+}, { tableName: 'bankaccounts' });
 
 const StoreSettings = sequelize.define('StoreSettings', {
     id: { type: DataTypes.STRING, primaryKey: true },
@@ -127,7 +129,7 @@ const StoreSettings = sequelize.define('StoreSettings', {
     showJargon: { type: DataTypes.BOOLEAN },
     showBank: { type: DataTypes.BOOLEAN },
     printerType: { type: DataTypes.STRING }
-});
+}, { tableName: 'storesettings' });
 
 const StockAdjustment = sequelize.define('StockAdjustment', {
     id: { type: DataTypes.STRING, primaryKey: true },
@@ -142,7 +144,7 @@ const StockAdjustment = sequelize.define('StockAdjustment', {
     note: { type: DataTypes.TEXT },
     userId: { type: DataTypes.STRING },
     userName: { type: DataTypes.STRING }
-});
+}, { tableName: 'stock_adjustments' });
 
 export {
     sequelize,
