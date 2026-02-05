@@ -282,6 +282,11 @@ const createCrudRoutes = (modelName) => {
 
     router.post('/', authenticateToken, async (req, res) => {
         try {
+            // Generate ID if not provided
+            if (!req.body.id) {
+                req.body.id = randomUUID();
+            }
+
             // RBAC: Only SUPERADMIN can create users
             if (modelName === 'User' && req.user.role !== 'SUPERADMIN') {
                 return res.status(403).json({ error: 'Access denied' });
